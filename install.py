@@ -232,10 +232,11 @@ def main() -> None:
             except Exception:
                 pass
 
-        # Download sound files with progress bar
+        # Download sound files with progress bar, skipping existing files
         total_sounds = len(sound_downloads)
         bar_width = 30
         warnings: list[str] = []
+        skipped_count = 0
         for idx, (pack, fname) in enumerate(sound_downloads, 1):
             filled = int(bar_width * idx / total_sounds)
             bar = "#" * filled + "-" * (bar_width - filled)
@@ -243,16 +244,23 @@ def main() -> None:
                 f"\r  Sounds: [{bar}] {idx}/{total_sounds}"
             )
             sys.stderr.flush()
+            dest_path = install_dir / "packs" / pack / "sounds" / fname
+            if dest_path.exists():
+                skipped_count += 1
+                continue
             try:
                 download(
                     f"{REPO_BASE}/packs/{pack}/sounds/{fname}",
-                    install_dir / "packs" / pack / "sounds" / fname,
+                    dest_path,
                 )
             except Exception:
                 warnings.append(f"{pack}/sounds/{fname}")
         if total_sounds:
             sys.stderr.write("\n")
             sys.stderr.flush()
+        downloaded_count = total_sounds - skipped_count - len(warnings)
+        if skipped_count:
+            print(f"  Sounds: {downloaded_count} new, {skipped_count} already installed")
         for warning in warnings:
             print(f"  Warning: failed to download {warning}")
 
