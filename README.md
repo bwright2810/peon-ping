@@ -1,6 +1,6 @@
 # peon-ping
 
-![macOS](https://img.shields.io/badge/macOS-blue) ![WSL2](https://img.shields.io/badge/WSL2-blue) ![Linux](https://img.shields.io/badge/Linux-blue)
+![macOS](https://img.shields.io/badge/macOS-blue) ![Windows](https://img.shields.io/badge/Windows-blue) ![WSL2](https://img.shields.io/badge/WSL2-blue) ![Linux](https://img.shields.io/badge/Linux-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-hook-ffab01)
 
@@ -12,11 +12,13 @@ Claude Code doesn't notify you when it finishes or needs permission. You tab awa
 
 ## Install
 
+### macOS / WSL2 / Linux
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/PeonPing/peon-ping/main/install.sh | bash
 ```
 
-One command. Takes 10 seconds. macOS, WSL2 (Windows), and Linux. Re-run to update (sounds and config preserved).
+One command. macOS, WSL2, and Linux. Re-run to update (sounds and config preserved).
 
 **Project-local install** — installs into `.claude/` in the current project instead of `~/.claude/`:
 
@@ -25,6 +27,26 @@ curl -fsSL https://raw.githubusercontent.com/PeonPing/peon-ping/main/install.sh 
 ```
 
 Local installs don't add the `peon` CLI alias or shell completions — use `/peon-ping-toggle` inside Claude Code instead.
+
+### Windows (native)
+
+Requires Python 3.6+ and PowerShell 5.1+ (both built into Windows 10+).
+
+From a local clone:
+
+```cmd
+git clone https://github.com/PeonPing/peon-ping.git
+cd peon-ping
+python install.py
+```
+
+The installer registers `python peon.py` as the Claude Code hook command, copies sound packs, and updates `~/.claude/settings.json`.
+
+To uninstall on Windows:
+
+```cmd
+python "%USERPROFILE%\.claude\hooks\peon-ping\uninstall.py"
+```
 
 ## What you'll hear
 
@@ -161,20 +183,31 @@ Want to add your own pack? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Uninstall
 
+**macOS / WSL2 / Linux:**
+
 ```bash
 bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/hooks/peon-ping/uninstall.sh        # global
 bash .claude/hooks/peon-ping/uninstall.sh           # project-local
 ```
 
+**Windows:**
+
+```cmd
+python "%USERPROFILE%\.claude\hooks\peon-ping\uninstall.py"
+```
+
 ## Requirements
 
-- macOS (uses `afplay` and AppleScript), WSL2 (uses PowerShell `MediaPlayer` and WinForms), or Linux (uses `pw-play`/`paplay`/`ffplay`/`mpv`/`aplay` and `notify-send`)
+- **macOS** — uses `afplay` and AppleScript
+- **Windows** — uses PowerShell `MediaPlayer` and WinForms (Python 3.6+, PowerShell 5.1+)
+- **WSL2** — uses PowerShell `MediaPlayer` and WinForms via `powershell.exe`
+- **Linux** — uses `pw-play`/`paplay`/`ffplay`/`mpv`/`aplay` and `notify-send`
 - Claude Code with hooks support
 - python3
 
 ## How it works
 
-`peon.sh` is a Claude Code hook registered for `SessionStart`, `UserPromptSubmit`, `Stop`, and `Notification` events. On each event it maps to a sound category, picks a random voice line (avoiding repeats), plays it via `afplay` (macOS), PowerShell `MediaPlayer` (WSL2), or `paplay`/`ffplay`/`mpv`/`aplay` (Linux), and updates your Terminal tab title.
+`peon.sh` (Unix) and `peon.py` (Windows) are Claude Code hooks registered for `SessionStart`, `UserPromptSubmit`, `Stop`, `Notification`, and `PermissionRequest` events. On each event the hook maps to a sound category, picks a random voice line (avoiding repeats), plays it via `afplay` (macOS), PowerShell `MediaPlayer` (Windows/WSL2), or `paplay`/`ffplay`/`mpv`/`aplay` (Linux), and updates your terminal tab title.
 
 Sound files are property of their respective publishers (Blizzard Entertainment, EA) and are included in the repo for convenience.
 
