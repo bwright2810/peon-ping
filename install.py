@@ -298,6 +298,7 @@ def main() -> None:
 
         # Download manifests and sounds from registry-resolved sources
         print(f"  Downloading manifests for {len(packs)} packs...")
+        ref_overrides: Dict[str, str] = {}  # pack -> ref that actually worked
         for pack in packs:
             source_repo, source_ref, source_path = get_pack_source(
                 pack, registry_data
@@ -309,7 +310,24 @@ def main() -> None:
                     install_dir / "packs" / pack / "openpeon.json",
                 )
             except Exception:
-                print(f"  Warning: failed to download manifest for {pack}")
+                # Registry source_ref may reference a tag that predates
+                # this pack — retry with the main branch as fallback.
+                if source_ref != "main":
+                    fallback_url = pack_base_url(
+                        source_repo, "main", source_path
+                    )
+                    try:
+                        download(
+                            f"{fallback_url}/openpeon.json",
+                            install_dir / "packs" / pack / "openpeon.json",
+                        )
+                        ref_overrides[pack] = "main"
+                    except Exception:
+                        print(
+                            f"  Warning: failed to download manifest for {pack}"
+                        )
+                else:
+                    print(f"  Warning: failed to download manifest for {pack}")
 
         # Build a list of all sound files to download so we can show progress
         sound_downloads: List[Tuple[str, str, str]] = []  # (pack, filename, base_url)
@@ -325,7 +343,8 @@ def main() -> None:
             source_repo, source_ref, source_path = get_pack_source(
                 pack, registry_data
             )
-            base_url = pack_base_url(source_repo, source_ref, source_path)
+            effective_ref = ref_overrides.get(pack, source_ref)
+            base_url = pack_base_url(source_repo, effective_ref, source_path)
             try:
                 seen: set[str] = set()
                 for cat in manifest_data.get("categories", {}).values():
