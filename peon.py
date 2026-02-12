@@ -828,7 +828,8 @@ def handle_hook_event() -> None:
         play_sound(sound_file, volume)
 
     # --- Notification ---
-    if notify and not paused:
+    notifications_enabled = str(config.get("desktop_notifications", False)).lower() != "false"
+    if notify and not paused and notifications_enabled:
         if not terminal_is_focused():
             send_notification(msg, title, notify_color or "red")
 

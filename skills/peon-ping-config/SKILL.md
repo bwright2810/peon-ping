@@ -17,6 +17,7 @@ The config file is at `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/peon-ping/confi
 - **volume** (number, 0.0–1.0): Sound volume
 - **active_pack** (string): Current sound pack name (e.g. `"peon"`, `"sc_kerrigan"`, `"glados"`)
 - **enabled** (boolean): Master on/off switch
+- **desktop_notifications** (boolean): Toggle desktop pop-up notifications independently of sounds. When `false`, sounds still play but no pop-ups appear. Default: `false`.
 - **pack_rotation** (array of strings): List of packs to rotate through per session. Empty `[]` uses `active_pack` only.
 - **pack_rotation_mode** (string): `"random"` (default) picks a random pack each session. `"round-robin"` cycles through in order.
 - **categories** (object): Toggle individual CESP sound categories:

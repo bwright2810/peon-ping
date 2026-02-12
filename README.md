@@ -109,7 +109,7 @@ The config lives at `$CLAUDE_CONFIG_DIR/hooks/peon-ping/config.json` (default: `
 ```
 
 - **volume**: 0.0–1.0 (quiet enough for the office)
-- **desktop_notifications**: `true`/`false` — toggle desktop notification popups independently from sounds (default: `true`)
+- **desktop_notifications**: `true`/`false` — toggle desktop notification popups independently from sounds (default: `false`)
 - **categories**: Toggle individual CESP sound categories on/off (e.g. `"session.start": false` to disable greeting sounds)
 - **annoyed_threshold / annoyed_window_seconds**: How many prompts in N seconds triggers the `user.spam` easter egg
 - **pack_rotation**: Array of pack names (e.g. `["peon", "sc_kerrigan", "peasant"]`). Each session randomly gets one pack from the list and keeps it for the whole session. Leave empty `[]` to use `active_pack` instead.
