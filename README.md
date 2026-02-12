@@ -224,4 +224,6 @@ Changes in this fork:
 
 - **Windows one-liner install** — no git clone required; install via a single PowerShell or curl command
 - **Independent notifications toggle** — new `"notifications"` config key lets you keep sounds while disabling desktop pop-ups (default: off)
+- **Install progress bar** — download mode shows a progress bar while fetching sound files
+- **Uninstaller fixes** — both uninstallers now remove the `peon-ping-config` skill; `install.py` now installs it
 - **All repo URLs point here** — install scripts, update checks, and docs reference this fork

@@ -191,15 +191,19 @@ def main() -> None:
         print("\nDownloading from GitHub...")
 
         # Download core files
-        for filename in ("peon.sh", "peon.py", "peon.bat", "completions.bash",
-                         "completions.fish", "VERSION", "uninstall.sh"):
+        core_files = (
+            "peon.sh", "peon.py", "peon.bat", "completions.bash",
+            "completions.fish", "VERSION", "uninstall.sh", "uninstall.py",
+        )
+        for filename in core_files:
             try:
                 download(f"{REPO_BASE}/{filename}", install_dir / filename)
-                print(f"  Downloaded {filename}")
             except Exception as exc:
                 print(f"  Warning: failed to download {filename}: {exc}")
+        print(f"  Core files: {len(core_files)} downloaded")
 
         # Download manifests
+        print(f"  Downloading manifests for {len(PACKS)} packs...")
         for pack in PACKS:
             try:
                 download(
@@ -209,7 +213,8 @@ def main() -> None:
             except Exception:
                 print(f"  Warning: failed to download {pack}/manifest.json")
 
-        # Download sound files referenced in manifests
+        # Build a list of all sound files to download so we can show progress
+        sound_downloads: list[tuple[str, str]] = []  # (pack, filename)
         for pack in PACKS:
             manifest_path = install_dir / "packs" / pack / "manifest.json"
             if not manifest_path.exists():
@@ -217,21 +222,39 @@ def main() -> None:
             try:
                 with open(manifest_path, "r", encoding="utf-8") as fh:
                     manifest = json.load(fh)
-                seen: set = set()
+                seen: set[str] = set()
                 for cat in manifest.get("categories", {}).values():
                     for s in cat.get("sounds", []):
                         fname = s["file"]
                         if fname not in seen:
                             seen.add(fname)
-                            try:
-                                download(
-                                    f"{REPO_BASE}/packs/{pack}/sounds/{fname}",
-                                    install_dir / "packs" / pack / "sounds" / fname,
-                                )
-                            except Exception:
-                                print(f"  Warning: failed to download {pack}/sounds/{fname}")
+                            sound_downloads.append((pack, fname))
             except Exception:
                 pass
+
+        # Download sound files with progress bar
+        total_sounds = len(sound_downloads)
+        bar_width = 30
+        warnings: list[str] = []
+        for idx, (pack, fname) in enumerate(sound_downloads, 1):
+            filled = int(bar_width * idx / total_sounds)
+            bar = "█" * filled + "░" * (bar_width - filled)
+            print(
+                f"\r  Sounds: |{bar}| {idx}/{total_sounds}",
+                end="",
+                flush=True,
+            )
+            try:
+                download(
+                    f"{REPO_BASE}/packs/{pack}/sounds/{fname}",
+                    install_dir / "packs" / pack / "sounds" / fname,
+                )
+            except Exception:
+                warnings.append(f"{pack}/sounds/{fname}")
+        if total_sounds:
+            print()  # newline after progress bar
+        for warning in warnings:
+            print(f"  Warning: failed to download {warning}")
 
         # Download config only on fresh install
         if not updating:
