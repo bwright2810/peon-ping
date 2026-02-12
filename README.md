@@ -142,7 +142,7 @@ peon-ping works with any agentic IDE that supports hooks. Adapters translate IDE
 | **Claude Code** | Built-in | `curl \| bash` install handles everything |
 | **OpenAI Codex** | Adapter | Add `command = "bash ~/.claude/hooks/peon-ping/adapters/codex.sh"` to `~/.codex/config.toml` under `[notify]` |
 | **Cursor** | Adapter | Add hook entries to `~/.cursor/hooks.json` pointing to `adapters/cursor.sh` |
-| **OpenCode** | Adapter | `curl -fsSL https://raw.githubusercontent.com/PeonPing/peon-ping/main/adapters/opencode.sh \| bash` |
+| **OpenCode** | Adapter | `curl -fsSL https://raw.githubusercontent.com/bwright2810/peon-ping/main/adapters/opencode.sh \| bash` |
 
 ## Sound packs
 
@@ -163,7 +163,7 @@ peon-ping works with any agentic IDE that supports hooks. Adapters translate IDE
 
 **[Browse all 40 packs with audio previews &rarr; openpeon.com/packs](https://openpeon.com/packs)**
 
-Install all 36 with `--all`, or switch packs anytime:
+Install all 40 with `--all`, or switch packs anytime:
 
 ```bash
 peon --pack glados                # switch to a specific pack
@@ -208,7 +208,7 @@ Sound packs are downloaded from the [OpenPeon registry](https://github.com/PeonP
 - [peonping.com](https://peonping.com/) — landing page
 - [openpeon.com](https://openpeon.com/) — CESP spec, pack browser, creation guide
 - [OpenPeon registry](https://github.com/PeonPing/registry) — pack registry (GitHub Pages)
-- [og-packs](https://github.com/PeonPing/og-packs) — the original 36 sound packs
+- [og-packs](https://github.com/PeonPing/og-packs) — the original 40 sound packs
 - [License (MIT)](LICENSE)
 
 ## Fork changelog
