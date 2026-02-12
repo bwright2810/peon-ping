@@ -110,6 +110,7 @@ Edit `$CLAUDE_CONFIG_DIR/hooks/peon-ping/config.json` (default: `~/.claude/hooks
 | `hd2_helldiver` | Helldiver (Helldivers 2) | "For democracy!", "How 'bout a nice cup of Liber-tea?", "Spreading freedom" | [@ZachTaylor99](https://github.com/ZachTaylor99) |
 | `molag_bal` | Molag Bal (Elder Scrolls) | "Speak.", "Crush him.", "You're mine now." | [@lloydaf](https://github.com/lloydaf) |
 | `sheogorath` | Sheogorath (Elder Scrolls) | "Greetings.", "Good choice.", "Boring, boring, boring." | [@lloydaf](https://github.com/lloydaf) |
+| `sopranos` | Tony Soprano (The Sopranos) | "Those who want respect, give respect.", "End of story.", "Forget about it." | [@voider1](https://github.com/voider1) |
 | `sc_terran` | Terran Units Mixed (StarCraft) | SCV, Firebat, Medic, Siege Tank, Science Vessel | [@workdd](https://github.com/workdd) |
 | `sc_scv` | SCV (StarCraft) | "Good to go, sir", "Affirmative", "I read you" | [@workdd](https://github.com/workdd) |
 | `sc_firebat` | Firebat (StarCraft) | "Need a light?", "Ready to roast!", "Fueled up!" | [@workdd](https://github.com/workdd) |
