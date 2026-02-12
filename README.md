@@ -46,12 +46,6 @@ curl -fsSL https://raw.githubusercontent.com/bwright2810/peon-ping/main/install.
 
 One command. Downloads the installer, runs it, cleans up. Re-run to update (sounds and config preserved).
 
-To uninstall on Windows:
-
-```cmd
-python "%USERPROFILE%\.claude\hooks\peon-ping\uninstall.py"
-```
-
 ## What you'll hear
 
 | Event | CESP Category | Examples |
@@ -88,6 +82,8 @@ peon --notifications-off  # Disable desktop notifications
 ```
 
 Tab completion is supported — type `peon --pack <TAB>` to see available pack names.
+
+> **Windows note:** The `peon` CLI alias is not available on Windows. Use `/peon-ping-toggle` inside Claude Code, or ask Claude directly to change settings (e.g. "set peon volume to 0.3", "switch to the glados pack").
 
 Pausing mutes sounds and desktop notifications instantly. Persists across sessions until you resume. Tab titles remain active when paused.
 
@@ -219,3 +215,13 @@ Sound files are property of their respective publishers (Blizzard Entertainment,
 
 - [Landing page](https://peonping.com/)
 - [License (MIT)](LICENSE)
+
+## Fork changelog
+
+This is a fork of [PeonPing/peon-ping](https://github.com/PeonPing/peon-ping) by [@tonyyont](https://github.com/tonyyont) — thank you!
+
+Changes in this fork:
+
+- **Windows one-liner install** — no git clone required; install via a single PowerShell or curl command
+- **Independent notifications toggle** — new `"notifications"` config key lets you keep sounds while disabling desktop pop-ups (default: off)
+- **All repo URLs point here** — install scripts, update checks, and docs reference this fork
