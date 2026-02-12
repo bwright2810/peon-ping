@@ -16,18 +16,30 @@ import sys
 import urllib.request
 import zipfile
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional, Tuple
 
-
-# All available sound packs (keep in sync with install.sh)
-PACKS = (
-    "acolyte_ru aom_greek glados peon peon_cz peon_es peon_fr peon_pl peon_ru "
-    "peasant peasant_cz peasant_es peasant_fr peasant_ru ra2_kirov "
-    "ra2_soviet_engineer sc_battlecruiser sc_firebat sc_kerrigan sc_medic "
-    "sc_scv sc_tank sc_terran sc_vessel tf2_engineer wc2_peasant"
-).split()
 
 REPO_BASE = "https://raw.githubusercontent.com/bwright2810/peon-ping/main"
+REGISTRY_URL = "https://peonping.github.io/registry/index.json"
+
+# Default packs (curated English set installed by default — keep in sync with install.sh)
+DEFAULT_PACKS = (
+    "peon peasant glados sc_kerrigan sc_battlecruiser "
+    "ra2_kirov dota2_axe duke_nukem tf2_engineer hd2_helldiver"
+).split()
+
+# Fallback pack list (used if registry is unreachable — keep in sync with install.sh)
+FALLBACK_PACKS = (
+    "acolyte_ru aoe2 aom_greek brewmaster_ru dota2_axe duke_nukem glados "
+    "hd2_helldiver molag_bal peon peon_cz peon_es peon_fr peon_pl peon_ru "
+    "peasant peasant_cz peasant_es peasant_fr peasant_ru ra2_kirov "
+    "ra2_soviet_engineer ra_soviet rick sc_battlecruiser sc_firebat sc_kerrigan "
+    "sc_medic sc_scv sc_tank sc_terran sc_vessel sheogorath sopranos "
+    "tf2_engineer wc2_peasant"
+).split()
+
+FALLBACK_REPO = "PeonPing/og-packs"
+FALLBACK_REF = "v1.0.0"
 
 
 # ---------------------------------------------------------------------------
@@ -75,12 +87,54 @@ def copy_if_exists(src: Path, dst: Path) -> bool:
     return False
 
 
+def fetch_registry() -> Optional[Dict[str, Any]]:
+    """Fetch the pack registry JSON.  Returns None on failure."""
+    try:
+        with urllib.request.urlopen(REGISTRY_URL, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return None
+
+
+def get_pack_names_from_registry(registry_data: Dict[str, Any]) -> List[str]:
+    """Extract pack names from registry JSON."""
+    return [p["name"] for p in registry_data.get("packs", [])]
+
+
+def get_pack_source(
+    pack_name: str, registry_data: Optional[Dict[str, Any]]
+) -> Tuple[str, str, str]:
+    """Return (source_repo, source_ref, source_path) for a pack.
+
+    Falls back to FALLBACK_REPO / FALLBACK_REF when registry data is
+    unavailable or the pack is not found.
+    """
+    if registry_data is not None:
+        for pack_entry in registry_data.get("packs", []):
+            if pack_entry["name"] == pack_name:
+                return (
+                    pack_entry.get("source_repo", FALLBACK_REPO),
+                    pack_entry.get("source_ref", FALLBACK_REF),
+                    pack_entry.get("source_path", pack_name),
+                )
+    return (FALLBACK_REPO, FALLBACK_REF, pack_name)
+
+
+def pack_base_url(source_repo: str, source_ref: str, source_path: str) -> str:
+    """Build the raw GitHub base URL for a pack's files."""
+    base = f"https://raw.githubusercontent.com/{source_repo}/{source_ref}"
+    if source_path:
+        return f"{base}/{source_path}"
+    return base
+
+
 # ---------------------------------------------------------------------------
 # Main installer
 # ---------------------------------------------------------------------------
 
 def main() -> None:
     local_mode = "--local" in sys.argv
+    install_all = "--all" in sys.argv
 
     if local_mode:
         base_dir = Path.cwd() / ".claude"
@@ -157,8 +211,40 @@ def main() -> None:
             print(f"Error: {base_dir} not found. Is Claude Code installed?")
         sys.exit(1)
 
+    # --- Fetch pack list from registry ---
+    registry_data: Optional[Dict[str, Any]] = None
+    all_packs: List[str] = []
+
+    if not is_local_clone:
+        print("\nFetching pack registry...")
+        registry_data = fetch_registry()
+        if registry_data is not None:
+            all_packs = get_pack_names_from_registry(registry_data)
+            print(f"Registry: {len(all_packs)} packs available")
+        else:
+            print("Warning: Could not fetch registry, using fallback pack list")
+            all_packs = list(FALLBACK_PACKS)
+
+        # Select packs to install
+        if install_all:
+            packs = list(all_packs)
+            print(f"Installing all {len(packs)} packs...")
+        else:
+            packs = list(DEFAULT_PACKS)
+            print(
+                f"Installing {len(packs)} default packs "
+                f"(use --all for all {len(all_packs)})"
+            )
+    else:
+        # Local clone: install whatever packs exist in the clone's packs/ dir
+        src_packs = script_dir / "packs"
+        if src_packs.exists():
+            packs = [d.name for d in sorted(src_packs.iterdir()) if d.is_dir()]
+        else:
+            packs = list(FALLBACK_PACKS)
+
     # --- Create pack directories ---
-    for pack in PACKS:
+    for pack in packs:
         (install_dir / "packs" / pack / "sounds").mkdir(parents=True, exist_ok=True)
 
     # --- Install / update core files ---
@@ -203,54 +289,56 @@ def main() -> None:
                 print(f"  Warning: failed to download {filename}: {exc}")
         print(f"  Core files: {len(core_files)} downloaded")
 
-        # Download manifests (CESP openpeon.json preferred, legacy manifest.json as fallback)
-        print(f"  Downloading manifests for {len(PACKS)} packs...")
-        for pack in PACKS:
-            for manifest_name in ("openpeon.json", "manifest.json"):
-                try:
-                    download(
-                        f"{REPO_BASE}/packs/{pack}/{manifest_name}",
-                        install_dir / "packs" / pack / manifest_name,
-                    )
-                except Exception:
-                    pass
+        # Download manifests and sounds from registry-resolved sources
+        print(f"  Downloading manifests for {len(packs)} packs...")
+        for pack in packs:
+            source_repo, source_ref, source_path = get_pack_source(
+                pack, registry_data
+            )
+            base_url = pack_base_url(source_repo, source_ref, source_path)
+            try:
+                download(
+                    f"{base_url}/openpeon.json",
+                    install_dir / "packs" / pack / "openpeon.json",
+                )
+            except Exception:
+                print(f"  Warning: failed to download manifest for {pack}")
 
-        # Build a list of all sound files to download so we can show progress.
-        # Prefer openpeon.json (CESP) over legacy manifest.json for the file list.
-        sound_downloads: list[tuple[str, str]] = []  # (pack, filename)
-        for pack in PACKS:
-            manifest: Optional[dict] = None
-            for manifest_name in ("openpeon.json", "manifest.json"):
-                manifest_path = install_dir / "packs" / pack / manifest_name
-                if manifest_path.exists():
-                    try:
-                        with open(manifest_path, "r", encoding="utf-8") as fh:
-                            manifest = json.load(fh)
-                        break
-                    except Exception:
-                        continue
-            if not manifest:
+        # Build a list of all sound files to download so we can show progress
+        sound_downloads: List[Tuple[str, str, str]] = []  # (pack, filename, base_url)
+        for pack in packs:
+            manifest_path = install_dir / "packs" / pack / "openpeon.json"
+            if not manifest_path.exists():
                 continue
             try:
+                with open(manifest_path, "r", encoding="utf-8") as fh:
+                    manifest_data = json.load(fh)
+            except (json.JSONDecodeError, OSError):
+                continue
+            source_repo, source_ref, source_path = get_pack_source(
+                pack, registry_data
+            )
+            base_url = pack_base_url(source_repo, source_ref, source_path)
+            try:
                 seen: set[str] = set()
-                for cat in manifest.get("categories", {}).values():
+                for cat in manifest_data.get("categories", {}).values():
                     for s in cat.get("sounds", []):
                         file_ref: str = s["file"]
                         # openpeon.json uses "sounds/file.wav"; legacy uses "file.wav"
                         fname = file_ref.split("/")[-1]
                         if fname not in seen:
                             seen.add(fname)
-                            sound_downloads.append((pack, fname))
-            except Exception:
+                            sound_downloads.append((pack, fname, base_url))
+            except (KeyError, TypeError):
                 pass
 
         # Download sound files with progress bar, skipping existing files
         total_sounds = len(sound_downloads)
         bar_width = 30
-        warnings: list[str] = []
+        download_warnings: List[str] = []
         skipped_count = 0
-        for idx, (pack, fname) in enumerate(sound_downloads, 1):
-            filled = int(bar_width * idx / total_sounds)
+        for idx, (pack, fname, base_url) in enumerate(sound_downloads, 1):
+            filled = int(bar_width * idx / total_sounds) if total_sounds else 0
             bar = "#" * filled + "-" * (bar_width - filled)
             sys.stderr.write(
                 f"\r  Sounds: [{bar}] {idx}/{total_sounds}"
@@ -261,19 +349,16 @@ def main() -> None:
                 skipped_count += 1
                 continue
             try:
-                download(
-                    f"{REPO_BASE}/packs/{pack}/sounds/{fname}",
-                    dest_path,
-                )
+                download(f"{base_url}/sounds/{fname}", dest_path)
             except Exception:
-                warnings.append(f"{pack}/sounds/{fname}")
+                download_warnings.append(f"{pack}/sounds/{fname}")
         if total_sounds:
             sys.stderr.write("\n")
             sys.stderr.flush()
-        downloaded_count = total_sounds - skipped_count - len(warnings)
+        downloaded_count = total_sounds - skipped_count - len(download_warnings)
         if skipped_count:
             print(f"  Sounds: {downloaded_count} new, {skipped_count} already installed")
-        for warning in warnings:
+        for warning in download_warnings:
             print(f"  Warning: failed to download {warning}")
 
         # Download config only on fresh install
@@ -389,7 +474,7 @@ def main() -> None:
 
     # --- Verify sounds ---
     print()
-    for pack in PACKS:
+    for pack in packs:
         sound_dir = install_dir / "packs" / pack / "sounds"
         sound_count = 0
         if sound_dir.exists():
