@@ -17,6 +17,32 @@ When merging commits from the upstream repo (`https://github.com/PeonPing/peon-p
   - `uninstall.sh` ↔ `uninstall.py`
   - `peon.bat` wraps `peon.py`
 
+### Expected upstream deletions
+
+Upstream does not maintain our Windows files. Merges will show deletions of `install.py`, `peon.py`, `peon.bat`, and `uninstall.py`. This is expected — git will keep our versions as long as they have local modifications. Do not be alarmed by these appearing in the diff.
+
+### Post-merge checklist
+
+After every upstream merge, verify the following:
+
+**Fork URLs** — these files contain raw GitHub URLs that upstream points to `PeonPing/peon-ping`. Ours must point to `bwright2810/peon-ping`:
+- `install.sh` — `REPO_BASE` variable
+- `peon.sh` — VERSION check URL (~line 695), update available message (~line 712)
+- `README.md` — all install command curl URLs
+
+**`desktop_notifications` default = `false`** — upstream defaults to `true`. Check all of these locations:
+- `config.json` — the `desktop_notifications` field
+- `peon.sh` — embedded Python status display (`c.get('desktop_notifications', False)`), main config read (`cfg.get('desktop_notifications', False)`), smart notification fallback (`${DESKTOP_NOTIF:-false}`)
+- `peon.py` — `config.get("desktop_notifications", False)`
+- `skills/peon-ping-config/SKILL.md` — the `desktop_notifications` field description and default
+- `README.md` — the desktop_notifications documentation line
+
+**`uninstall.sh`** — must remove both `peon-ping-toggle` AND `peon-ping-config` skill directories. Upstream only removes `peon-ping-toggle`.
+
+**`FALLBACK_PACKS` in `install.py`** — keep in sync with `FALLBACK_PACKS` in `install.sh` when upstream adds new packs.
+
+**`DEFAULT_PACKS` in `install.py`** — keep in sync with `DEFAULT_PACKS` in `install.sh`.
+
 ## What This Is
 
 peon-ping is a Claude Code hook that plays game character voice lines and sends desktop notifications when Claude Code needs attention. It handles 5 hook events: `SessionStart`, `UserPromptSubmit`, `Stop`, `Notification`, `PermissionRequest`. Written entirely in bash + embedded Python (no npm/node runtime needed). This fork adds native Windows support via `peon.py` and `install.py`.
