@@ -286,10 +286,10 @@ case "${1:-}" in
 import json
 try:
     c = json.load(open('$CONFIG'))
-    dn = c.get('desktop_notifications', True)
+    dn = c.get('desktop_notifications', False)
     print('peon-ping: desktop notifications ' + ('on' if dn else 'off'))
 except:
-    print('peon-ping: desktop notifications on')
+    print('peon-ping: desktop notifications off')
 "
     exit 0 ;;
   --notifications-on)
@@ -466,7 +466,7 @@ if str(cfg.get('enabled', True)).lower() == 'false':
     sys.exit(0)
 
 volume = cfg.get('volume', 0.5)
-desktop_notif = cfg.get('desktop_notifications', True)
+desktop_notif = cfg.get('desktop_notifications', False)
 active_pack = cfg.get('active_pack', 'peon')
 pack_rotation = cfg.get('pack_rotation', [])
 annoyed_threshold = int(cfg.get('annoyed_threshold', 3))
@@ -708,7 +708,7 @@ if [ -n "$SOUND_FILE" ] && [ -f "$SOUND_FILE" ]; then
 fi
 
 # --- Smart notification: only when terminal is NOT frontmost ---
-if [ -n "$NOTIFY" ] && [ "$PAUSED" != "true" ] && [ "${DESKTOP_NOTIF:-true}" = "true" ]; then
+if [ -n "$NOTIFY" ] && [ "$PAUSED" != "true" ] && [ "${DESKTOP_NOTIF:-false}" = "true" ]; then
   if ! terminal_is_focused; then
     send_notification "$MSG" "$TITLE" "${NOTIFY_COLOR:-red}"
   fi

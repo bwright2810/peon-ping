@@ -501,15 +501,24 @@ def get_project_name(cwd: str) -> str:
 def pick_sound(pack_name: str, category: str, state: dict) -> Optional[Path]:
     """Pick a random sound file for *category*, avoiding the last-played file.
 
-    Updates ``state['last_played']`` in-place.
+    Supports both ``openpeon.json`` (CESP standard) and legacy
+    ``manifest.json`` formats.  Updates ``state['last_played']`` in-place.
     """
     pack_dir = PEON_DIR / "packs" / pack_name
-    manifest_path = pack_dir / "manifest.json"
 
-    try:
-        with open(manifest_path, "r", encoding="utf-8") as fh:
-            manifest = json.load(fh)
-    except Exception:
+    # Prefer openpeon.json (CESP), fall back to legacy manifest.json
+    manifest: Optional[dict] = None
+    for manifest_name in ("openpeon.json", "manifest.json"):
+        manifest_path = pack_dir / manifest_name
+        if manifest_path.exists():
+            try:
+                with open(manifest_path, "r", encoding="utf-8") as fh:
+                    manifest = json.load(fh)
+                break
+            except Exception:
+                continue
+
+    if not manifest:
         return None
 
     sounds: List[dict] = (
@@ -530,7 +539,12 @@ def pick_sound(pack_name: str, category: str, state: dict) -> Optional[Path]:
     last_played[category] = pick["file"]
     state["last_played"] = last_played
 
-    sound_path = pack_dir / "sounds" / pick["file"]
+    # openpeon.json uses paths like "sounds/file.wav"; legacy uses just "file.wav"
+    file_ref: str = pick["file"]
+    if "/" in file_ref:
+        sound_path = pack_dir / file_ref
+    else:
+        sound_path = pack_dir / "sounds" / file_ref
     return sound_path if sound_path.exists() else None
 
 
@@ -639,14 +653,14 @@ def route_event(
     state_updates: dict = {}
 
     if event == "SessionStart":
-        category = "greeting"
+        category = "session.start"
         status = "ready"
 
     elif event == "UserPromptSubmit":
         status = "working"
 
         categories_cfg = config.get("categories", {})
-        if str(categories_cfg.get("annoyed", True)).lower() != "false":
+        if str(categories_cfg.get("user.spam", True)).lower() != "false":
             annoyed_threshold = int(config.get("annoyed_threshold", 3))
             annoyed_window = float(config.get("annoyed_window_seconds", 10))
             now = time.time()
@@ -663,10 +677,10 @@ def route_event(
             state_updates["prompt_timestamps"] = all_ts
 
             if len(session_ts) >= annoyed_threshold:
-                category = "annoyed"
+                category = "user.spam"
 
     elif event == "Stop":
-        category = "complete"
+        category = "task.complete"
         status = "done"
         marker = "\u25cf "
         notify = True
@@ -675,7 +689,7 @@ def route_event(
 
     elif event == "Notification":
         if notification_type == "permission_prompt":
-            category = "permission"
+            category = "input.required"
             status = "needs approval"
             marker = "\u25cf "
             notify = True
@@ -691,7 +705,7 @@ def route_event(
             return None
 
     elif event == "PermissionRequest":
-        category = "permission"
+        category = "input.required"
         status = "needs approval"
         marker = "\u25cf "
         notify = True
@@ -787,8 +801,8 @@ def handle_hook_event() -> None:
     cats = config.get("categories", {})
     cat_enabled: Dict[str, bool] = {}
     for c in (
-        "greeting", "acknowledge", "complete", "error",
-        "permission", "resource_limit", "annoyed",
+        "session.start", "task.acknowledge", "task.complete", "task.error",
+        "input.required", "resource.limit", "user.spam",
     ):
         cat_enabled[c] = str(cats.get(c, True)).lower() != "false"
 
