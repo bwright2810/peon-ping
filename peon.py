@@ -566,7 +566,7 @@ def check_for_updates() -> None:
 
         try:
             with urllib.request.urlopen(
-                "https://raw.githubusercontent.com/PeonPing/peon-ping/main/VERSION",
+                "https://raw.githubusercontent.com/bwright2810/peon-ping/main/VERSION",
                 timeout=5,
             ) as response:
                 remote_version = response.read().decode("utf-8").strip()
@@ -605,7 +605,7 @@ def show_update_notice() -> None:
             print(
                 f"peon-ping update available: {current_version} \u2192 {new_version} "
                 f"\u2014 run: curl -fsSL "
-                f"https://raw.githubusercontent.com/PeonPing/peon-ping/main/install.sh | bash",
+                f"https://raw.githubusercontent.com/bwright2810/peon-ping/main/install.sh | bash",
                 file=sys.stderr,
             )
     except Exception:

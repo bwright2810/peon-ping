@@ -26,7 +26,7 @@ PACKS = (
     "sc_scv sc_tank sc_terran sc_vessel tf2_engineer wc2_peasant"
 ).split()
 
-REPO_BASE = "https://raw.githubusercontent.com/PeonPing/peon-ping/main"
+REPO_BASE = "https://raw.githubusercontent.com/bwright2810/peon-ping/main"
 
 
 # ---------------------------------------------------------------------------
