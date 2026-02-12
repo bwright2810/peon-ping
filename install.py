@@ -238,12 +238,11 @@ def main() -> None:
         warnings: list[str] = []
         for idx, (pack, fname) in enumerate(sound_downloads, 1):
             filled = int(bar_width * idx / total_sounds)
-            bar = "█" * filled + "░" * (bar_width - filled)
-            print(
-                f"\r  Sounds: |{bar}| {idx}/{total_sounds}",
-                end="",
-                flush=True,
+            bar = "#" * filled + "-" * (bar_width - filled)
+            sys.stderr.write(
+                f"\r  Sounds: [{bar}] {idx}/{total_sounds}"
             )
+            sys.stderr.flush()
             try:
                 download(
                     f"{REPO_BASE}/packs/{pack}/sounds/{fname}",
@@ -252,7 +251,8 @@ def main() -> None:
             except Exception:
                 warnings.append(f"{pack}/sounds/{fname}")
         if total_sounds:
-            print()  # newline after progress bar
+            sys.stderr.write("\n")
+            sys.stderr.flush()
         for warning in warnings:
             print(f"  Warning: failed to download {warning}")
 
