@@ -679,13 +679,31 @@ def route_event(
             if len(session_ts) >= annoyed_threshold:
                 category = "user.spam"
 
+        silent_window = float(config.get("silent_window_seconds", 0))
+        if silent_window > 0:
+            prompt_starts = state.get("prompt_start_times", {})
+            prompt_starts[session_id] = time.time()
+            state_updates["prompt_start_times"] = prompt_starts
+
     elif event == "Stop":
         category = "task.complete"
+        silent = False
+        silent_window = float(config.get("silent_window_seconds", 0))
+        if silent_window > 0:
+            prompt_starts = state.get("prompt_start_times", {})
+            # start_time=0 when no prior prompt; 0 is falsy so short-circuits to not-silent
+            start_time = prompt_starts.pop(session_id, 0)
+            if start_time and (time.time() - start_time) < silent_window:
+                silent = True
+            state_updates["prompt_start_times"] = prompt_starts
         status = "done"
-        marker = "\u25cf "
-        notify = True
-        notify_color = "blue"
-        msg = f"{project}  \u2014  Task complete"
+        if not silent:
+            marker = "\u25cf "
+            notify = True
+            notify_color = "blue"
+            msg = f"{project}  \u2014  Task complete"
+        else:
+            category = ""
 
     elif event == "Notification":
         if notification_type == "permission_prompt":
@@ -991,6 +1009,13 @@ def main() -> None:
     args = sys.argv[1:]
 
     if not args:
+        # If stdin is a terminal (not a pipe from Claude Code), the user
+        # likely ran `peon` bare — show help instead of blocking on read.
+        if sys.stdin.isatty():
+            print("Usage: peon <command>")
+            print()
+            print("Run 'peon --help' for full command list.")
+            return
         # No CLI flags — act as hook handler (read event from stdin)
         handle_hook_event()
         return

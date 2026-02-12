@@ -433,6 +433,15 @@ HELPEOF
     echo "Run 'peon --help' for usage." >&2; exit 1 ;;
 esac
 
+# If no CLI arg was given and stdin is a terminal (not a pipe from Claude Code),
+# the user likely ran `peon` bare — show help instead of blocking on cat.
+if [ -t 0 ]; then
+  echo "Usage: peon <command>"
+  echo ""
+  echo "Run 'peon --help' for full command list."
+  exit 0
+fi
+
 INPUT=$(cat)
 
 # Debug log (uncomment to troubleshoot)
@@ -471,6 +480,7 @@ active_pack = cfg.get('active_pack', 'peon')
 pack_rotation = cfg.get('pack_rotation', [])
 annoyed_threshold = int(cfg.get('annoyed_threshold', 3))
 annoyed_window = float(cfg.get('annoyed_window_seconds', 10))
+silent_window = float(cfg.get('silent_window_seconds', 0))
 cats = cfg.get('categories', {})
 cat_enabled = {}
 for c in ['session.start','task.acknowledge','task.complete','task.error','input.required','resource.limit','user.spam']:
@@ -552,13 +562,30 @@ elif event == 'UserPromptSubmit':
         state_dirty = True
         if len(ts) >= annoyed_threshold:
             category = 'user.spam'
+    if silent_window > 0:
+        prompt_starts = state.get('prompt_start_times', {})
+        prompt_starts[session_id] = time.time()
+        state['prompt_start_times'] = prompt_starts
+        state_dirty = True
 elif event == 'Stop':
     category = 'task.complete'
+    silent = False
+    if silent_window > 0:
+        prompt_starts = state.get('prompt_start_times', {})
+        # start_time=0 when no prior prompt; 0 is falsy so short-circuits to not-silent
+        start_time = prompt_starts.pop(session_id, 0)
+        if start_time and (time.time() - start_time) < silent_window:
+            silent = True
+        state['prompt_start_times'] = prompt_starts
+        state_dirty = True
     status = 'done'
-    marker = '\u25cf '
-    notify = '1'
-    notify_color = 'blue'
-    msg = project + '  \u2014  Task complete'
+    if not silent:
+        marker = '\u25cf '
+        notify = '1'
+        notify_color = 'blue'
+        msg = project + '  \u2014  Task complete'
+    else:
+        category = ''
 elif event == 'Notification':
     if ntype == 'permission_prompt':
         category = 'input.required'

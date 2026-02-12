@@ -239,6 +239,107 @@ JSON
 }
 
 # ============================================================
+# Silent window (suppress short tasks)
+# ============================================================
+
+@test "silent_window suppresses sound for fast tasks" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{ "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {}, "silent_window_seconds": 5 }
+JSON
+  # Submit prompt (records start time)
+  run_peon '{"hook_event_name":"UserPromptSubmit","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  # Stop immediately (under 5s threshold)
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  ! afplay_was_called
+}
+
+@test "silent_window allows sound for slow tasks" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{ "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {}, "silent_window_seconds": 5 }
+JSON
+  # Submit prompt
+  run_peon '{"hook_event_name":"UserPromptSubmit","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  # Backdate the prompt start to 10 seconds ago
+  /usr/bin/python3 -c "
+import json, time
+state = json.load(open('$TEST_DIR/.state.json'))
+state['prompt_start_times'] = {'s1': time.time() - 10}
+state.setdefault('last_stop_time', 0)
+json.dump(state, open('$TEST_DIR/.state.json', 'w'))
+"
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  afplay_was_called
+}
+
+@test "silent_window=0 (default) does not suppress anything" {
+  # Default config has no silent_window_seconds (defaults to 0)
+  run_peon '{"hook_event_name":"UserPromptSubmit","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  afplay_was_called
+}
+
+@test "silent_window suppresses without prior prompt (no crash)" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{ "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {}, "silent_window_seconds": 5 }
+JSON
+  # Stop without any prior UserPromptSubmit — should NOT crash, should play sound
+  # (start_time defaults to 0, which is falsy, so silent stays False)
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  afplay_was_called
+}
+
+@test "silent_window does not interfere with debounce" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{ "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {}, "silent_window_seconds": 5 }
+JSON
+  # Submit prompt and backdate to make it a "slow" task
+  run_peon '{"hook_event_name":"UserPromptSubmit","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  /usr/bin/python3 -c "
+import json, time
+state = json.load(open('$TEST_DIR/.state.json'))
+state['prompt_start_times'] = {'s1': time.time() - 10}
+state.setdefault('last_stop_time', 0)
+json.dump(state, open('$TEST_DIR/.state.json', 'w'))
+"
+  # First Stop — should play (slow task, not debounced)
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  count1=$(afplay_call_count)
+  [ "$count1" = "1" ]
+
+  # Second prompt + immediate Stop — debounced regardless of silent_window
+  run_peon '{"hook_event_name":"UserPromptSubmit","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  count2=$(afplay_call_count)
+  [ "$count2" = "1" ]
+}
+
+@test "silent_window multi-session isolation" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{ "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {}, "silent_window_seconds": 5 }
+JSON
+  # Session A: prompt + fast Stop (silent)
+  run_peon '{"hook_event_name":"UserPromptSubmit","cwd":"/tmp/myproject","session_id":"sA","permission_mode":"default"}'
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"sA","permission_mode":"default"}'
+  ! afplay_was_called
+
+  # Session B: Stop without any prompt — should play sound (no recorded start time for sB)
+  # Need to clear debounce first
+  /usr/bin/python3 -c "
+import json, time
+state = json.load(open('$TEST_DIR/.state.json'))
+state['last_stop_time'] = 0
+json.dump(state, open('$TEST_DIR/.state.json', 'w'))
+"
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"sB","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  afplay_was_called
+}
+
+# ============================================================
 # Update check
 # ============================================================
 
@@ -502,6 +603,18 @@ json.dump(c, open('$TEST_DIR/config.json', 'w'), indent=2)
   [ "$status" -ne 0 ]
   [[ "$output" == *"Unknown option"* ]]
   [[ "$output" == *"peon --help"* ]]
+}
+
+@test "no arguments on a TTY shows usage hint and exits" {
+  # 'script' allocates a pseudo-TTY so stdin is not a pipe
+  if [[ "$(uname)" == "Darwin" ]]; then
+    run script -q /dev/null bash "$PEON_SH"
+  else
+    run script -qc "bash '$PEON_SH'" /dev/null
+  fi
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Usage:"* ]]
+  [[ "$output" == *"--help"* ]]
 }
 
 # ============================================================

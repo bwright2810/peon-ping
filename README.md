@@ -123,6 +123,7 @@ The config lives at `$CLAUDE_CONFIG_DIR/hooks/peon-ping/config.json` (default: `
 - **desktop_notifications**: `true`/`false` — toggle desktop notification popups independently from sounds (default: `false`)
 - **categories**: Toggle individual CESP sound categories on/off (e.g. `"session.start": false` to disable greeting sounds)
 - **annoyed_threshold / annoyed_window_seconds**: How many prompts in N seconds triggers the `user.spam` easter egg
+- **silent_window_seconds**: Suppress `task.complete` sounds and notifications for tasks shorter than N seconds. (e.g. `10` to only hear sounds for tasks that take longer than 10 seconds)
 - **pack_rotation**: Array of pack names (e.g. `["peon", "sc_kerrigan", "peasant"]`). Each session randomly gets one pack from the list and keeps it for the whole session. Leave empty `[]` to use `active_pack` instead.
 
 ## Multi-IDE Support

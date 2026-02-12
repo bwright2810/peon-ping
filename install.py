@@ -135,6 +135,10 @@ def pack_base_url(source_repo: str, source_ref: str, source_path: str) -> str:
 def main() -> None:
     local_mode = "--local" in sys.argv
     install_all = "--all" in sys.argv
+    custom_packs_csv = ""
+    for arg in sys.argv[1:]:
+        if arg.startswith("--packs="):
+            custom_packs_csv = arg[len("--packs="):]
 
     if local_mode:
         base_dir = Path.cwd() / ".claude"
@@ -226,7 +230,10 @@ def main() -> None:
             all_packs = list(FALLBACK_PACKS)
 
         # Select packs to install
-        if install_all:
+        if custom_packs_csv:
+            packs = [p.strip() for p in custom_packs_csv.split(",") if p.strip()]
+            print(f"Installing custom packs: {' '.join(packs)}")
+        elif install_all:
             packs = list(all_packs)
             print(f"Installing all {len(packs)} packs...")
         else:

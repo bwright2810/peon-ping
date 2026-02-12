@@ -24,6 +24,7 @@ The config file is at `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hooks/peon-ping/confi
   - `session.start`, `task.acknowledge`, `task.complete`, `task.error`, `input.required`, `resource.limit`, `user.spam` — each a boolean
 - **annoyed_threshold** (number): How many rapid prompts trigger user.spam sounds
 - **annoyed_window_seconds** (number): Time window for the annoyed threshold
+- **silent_window_seconds** (number): Suppress task.complete sounds for tasks shorter than this many seconds
 
 ## How to update
 
