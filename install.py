@@ -16,6 +16,7 @@ import sys
 import urllib.request
 import zipfile
 from pathlib import Path
+from typing import Optional
 
 
 # All available sound packs (keep in sync with install.sh)
@@ -202,30 +203,41 @@ def main() -> None:
                 print(f"  Warning: failed to download {filename}: {exc}")
         print(f"  Core files: {len(core_files)} downloaded")
 
-        # Download manifests
+        # Download manifests (CESP openpeon.json preferred, legacy manifest.json as fallback)
         print(f"  Downloading manifests for {len(PACKS)} packs...")
         for pack in PACKS:
-            try:
-                download(
-                    f"{REPO_BASE}/packs/{pack}/manifest.json",
-                    install_dir / "packs" / pack / "manifest.json",
-                )
-            except Exception:
-                print(f"  Warning: failed to download {pack}/manifest.json")
+            for manifest_name in ("openpeon.json", "manifest.json"):
+                try:
+                    download(
+                        f"{REPO_BASE}/packs/{pack}/{manifest_name}",
+                        install_dir / "packs" / pack / manifest_name,
+                    )
+                except Exception:
+                    pass
 
-        # Build a list of all sound files to download so we can show progress
+        # Build a list of all sound files to download so we can show progress.
+        # Prefer openpeon.json (CESP) over legacy manifest.json for the file list.
         sound_downloads: list[tuple[str, str]] = []  # (pack, filename)
         for pack in PACKS:
-            manifest_path = install_dir / "packs" / pack / "manifest.json"
-            if not manifest_path.exists():
+            manifest: Optional[dict] = None
+            for manifest_name in ("openpeon.json", "manifest.json"):
+                manifest_path = install_dir / "packs" / pack / manifest_name
+                if manifest_path.exists():
+                    try:
+                        with open(manifest_path, "r", encoding="utf-8") as fh:
+                            manifest = json.load(fh)
+                        break
+                    except Exception:
+                        continue
+            if not manifest:
                 continue
             try:
-                with open(manifest_path, "r", encoding="utf-8") as fh:
-                    manifest = json.load(fh)
                 seen: set[str] = set()
                 for cat in manifest.get("categories", {}).values():
                     for s in cat.get("sounds", []):
-                        fname = s["file"]
+                        file_ref: str = s["file"]
+                        # openpeon.json uses "sounds/file.wav"; legacy uses "file.wav"
+                        fname = file_ref.split("/")[-1]
                         if fname not in seen:
                             seen.add(fname)
                             sound_downloads.append((pack, fname))
