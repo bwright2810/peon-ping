@@ -41,13 +41,13 @@ Requires Python 3.6+ (built into most setups) and one of PowerShell or curl.
 **PowerShell:**
 
 ```powershell
-powershell -c "irm https://raw.githubusercontent.com/bwright2810/peon-ping/main/install.py -OutFile $env:TEMP\peon-install.py; python $env:TEMP\peon-install.py; del $env:TEMP\peon-install.py"
+powershell -c "irm https://raw.githubusercontent.com/bwright2810/peon-ping/main/install.py -OutFile $env:TEMP\peon-install.py; python $env:TEMP\peon-install.py --all; del $env:TEMP\peon-install.py"
 ```
 
 **cmd / clink:**
 
 ```cmd
-curl -fsSL https://raw.githubusercontent.com/bwright2810/peon-ping/main/install.py -o %TEMP%\peon-install.py && python %TEMP%\peon-install.py && del %TEMP%\peon-install.py
+curl -fsSL https://raw.githubusercontent.com/bwright2810/peon-ping/main/install.py -o %TEMP%\peon-install.py && python %TEMP%\peon-install.py --all && del %TEMP%\peon-install.py
 ```
 
 One command. Downloads the installer, runs it, cleans up. Re-run to update (sounds and config preserved).
