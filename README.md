@@ -89,7 +89,12 @@ Pausing mutes sounds and desktop notifications instantly. Persists across sessio
 
 ## Configuration
 
-peon-ping installs a `/peon-ping-toggle` slash command in Claude Code. You can also just ask Claude to change settings for you — e.g. "enable round-robin pack rotation", "set volume to 0.3", or "add glados to my pack rotation". No need to edit config files manually.
+peon-ping installs two slash commands in Claude Code:
+
+- `/peon-ping-toggle` — quickly mute or unmute sounds
+- `/peon-ping-config` — Claude reads and edits your config for you (e.g. "set volume to 0.3", "switch to the glados pack", "enable round-robin pack rotation")
+
+You can also just ask Claude to change settings directly — no slash command needed. Claude will use the config skill automatically.
 
 The config lives at `$CLAUDE_CONFIG_DIR/hooks/peon-ping/config.json` (default: `~/.claude/hooks/peon-ping/config.json`):
 
