@@ -43,6 +43,8 @@ After every upstream merge, verify the following:
 
 **`DEFAULT_PACKS` in `install.py`** — keep in sync with `DEFAULT_PACKS` in `install.sh`.
 
+**`README.md` Windows parity** — if upstream changes non-Windows instructions in the README (e.g. install commands, uninstall commands, requirements), ensure the corresponding Windows-specific sections are also updated to match, when applicable.
+
 ## What This Is
 
 peon-ping is a Claude Code hook that plays game character voice lines and sends desktop notifications when Claude Code needs attention. It handles 5 hook events: `SessionStart`, `UserPromptSubmit`, `Stop`, `Notification`, `PermissionRequest`. Written entirely in bash + embedded Python (no npm/node runtime needed). This fork adds native Windows support via `peon.py` and `install.py`.
