@@ -129,13 +129,14 @@ def main() -> None:
         fish_completions.unlink()
         print("Removed fish completions")
 
-    # --- Remove skill directory ---
-    skill_dir = base_dir / "skills" / "peon-ping-toggle"
-    if skill_dir.exists():
-        print()
-        print(f"Removing {skill_dir}...")
-        shutil.rmtree(skill_dir)
-        print("Removed skill")
+    # --- Remove skill directories ---
+    for skill_name in ("peon-ping-toggle", "peon-ping-config"):
+        skill_dir = base_dir / "skills" / skill_name
+        if skill_dir.exists():
+            print()
+            print(f"Removing {skill_dir}...")
+            shutil.rmtree(skill_dir)
+            print(f"Removed {skill_name} skill")
 
     # --- Remove install directory (deployed copy only) ---
     # Only remove the install directory when running from the deployed copy

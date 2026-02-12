@@ -280,6 +280,27 @@ def main() -> None:
         except Exception:
             print("Warning: failed to download skill file")
 
+    # --- Install config skill ---
+    config_skill_dir = base_dir / "skills" / "peon-ping-config"
+    config_skill_dir.mkdir(parents=True, exist_ok=True)
+
+    config_skill_src = (
+        script_dir / "skills" / "peon-ping-config" / "SKILL.md"
+        if is_local_clone
+        else None
+    )
+
+    if config_skill_src and config_skill_src.exists():
+        shutil.copy2(config_skill_src, config_skill_dir / "SKILL.md")
+    elif not is_local_clone:
+        try:
+            download(
+                f"{REPO_BASE}/skills/peon-ping-config/SKILL.md",
+                config_skill_dir / "SKILL.md",
+            )
+        except Exception:
+            print("Warning: failed to download config skill file")
+
     # --- Shell aliases (global install, Unix only) ---
     if not local_mode and os.name != "nt":
         alias_line = f'alias peon="bash {install_dir}/peon.sh"'
