@@ -18,7 +18,13 @@ Claude Code doesn't notify you when it finishes or needs permission. You tab awa
 curl -fsSL https://raw.githubusercontent.com/bwright2810/peon-ping/main/install.sh | bash
 ```
 
-One command. macOS, WSL2, and Linux. Re-run to update (sounds and config preserved).
+One command. Takes 10 seconds. macOS, WSL2 (Windows), and Linux. Re-run to update (sounds and config preserved). Installs 10 curated English packs by default.
+
+**Install all 36 packs** (every language and franchise):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/bwright2810/peon-ping/main/install.sh | bash -s -- --all
+```
 
 **Project-local install** — installs into `.claude/` in the current project instead of `~/.claude/`:
 
@@ -131,60 +137,32 @@ peon-ping works with any agentic IDE that supports hooks. Adapters translate IDE
 
 ## Sound packs
 
-| Pack | Character | Sounds | By |
-|---|---|---|---|
-| `peon` (default) | Orc Peon (Warcraft III) | "Ready to work?", "Work, work.", "Okie dokie." | [@tonyyont](https://github.com/tonyyont) |
-| `peon_es` | Peon Orco (Warcraft III, Spanish) | "¿Qué quieres?", "Trabajo, trabajo.", "Okay makey." | [@Keralin](https://github.com/Keralin) |
-| `peon_fr` | Orc Peon (Warcraft III, French) | "Prêt à travailler?", "Travail, travail.", "D'accord." | [@thomasKn](https://github.com/thomasKn) |
-| `peon_cz` | Orc Peon (Warcraft III, Czech) | "Práce, práce.", "Připraven k práci.", "Co chceš?" | [@vojtabiberle](https://github.com/vojtabiberle) |
-| `peon_pl` | Orc Peon (Warcraft III, Polish) | Polish voice lines | [@ArturSkowronski](https://github.com/ArturSkowronski) |
-| `peasant` | Human Peasant (Warcraft III) | "Yes, milord?", "Job's done!", "Ready, sir." | [@thomasKn](https://github.com/thomasKn) |
-| `peasant_cz` | Human Peasant (Warcraft III, Czech) | "Ano, pane?", "Zase práce?", "Tak já teda jdu!" | [@vojtabiberle](https://github.com/vojtabiberle) |
-| `peasant_es` | Campesino Humano (Warcraft III, Spanish) | "¿Sí, mi lord?", "¡A trabajar!", "Siiii, mi señor." | [@Keralin](https://github.com/Keralin) |
-| `peasant_fr` | Human Peasant (Warcraft III, French) | "Oui, monseigneur?", "C'est fait!", "Prêt, monsieur." | [@thomasKn](https://github.com/thomasKn) |
-| `ra2_kirov` | Kirov Airship (Red Alert 2) | "Kirov reporting", "Bombardiers to your stations", "Helium mix optimal" | [@i-zhirov](https://github.com/i-zhirov) |
-| `ra2_soviet_engineer` | Soviet Engineer (Red Alert 2) | "Tools ready", "Yes, commander", "Engineering" | [@msukkari](https://github.com/msukkari) |
-| `ra_soviet` | Soviet Soldier (Red Alert) | "Awaiting orders.", "Acknowledged.", "Comrade?" | [@JairusKhan](https://github.com/JairusKhan) |
-| `peon_ru` | Orc Peon (Warcraft III, Russian) | "Готов вкалывать!", "Работа, работа.", "Оки-доки." | [@maksimfedin](https://github.com/maksimfedin) |
-| `peasant_ru` | Human Peasant (Warcraft III, Russian) | "Да, господин?", "Готово.", "Ну, я пошёл!" | [@maksimfedin](https://github.com/maksimfedin) |
-| `acolyte_ru` | Undead Acolyte (Warcraft III, Russian) | "Моя жизнь за Нер'зула!", "Да, повелитель.", "Тени служат мне." | [@maksimfedin](https://github.com/maksimfedin) |
-| `tf2_engineer` | Engineer (Team Fortress 2) | "Sentry going up.", "Nice work!", "Cowboy up!" | [@Arie](https://github.com/Arie) |
-| `rick` | Rick Sanchez (Rick and Morty) | "Wubba lubba dub dub!", "I'm pickle Rick!", "Get schwifty!" | [@ranjitp16](https://github.com/ranjitp16) |
-| `sc_battlecruiser` | Battlecruiser (StarCraft) | "Battlecruiser operational", "Make it happen", "Engage" | [@garysheng](https://github.com/garysheng) |
-| `sc_kerrigan` | Sarah Kerrigan (StarCraft) | "I gotcha", "What now?", "Easily amused, huh?" | [@garysheng](https://github.com/garysheng) |
-| `dota2_axe` | Axe (Dota 2) | "Axe is ready!", "Axe-actly!", "Come and get it!" | [@x-n2o](https://github.com/x-n2o) |
-| `duke_nukem` | Duke Nukem (Bulletstorm DLC) | "Hail to the king!", "Groovy.", "Balls of steel." | [@garysheng](https://github.com/garysheng) |
-| `glados` | GLaDOS (Portal) | "Oh, it's you.", "You monster.", "Your entire team is dead." | [@DoubleGremlin181](https://github.com/DoubleGremlin181) |
-| `hd2_helldiver` | Helldiver (Helldivers 2) | "For democracy!", "How 'bout a nice cup of Liber-tea?", "Spreading freedom" | [@ZachTaylor99](https://github.com/ZachTaylor99) |
-| `molag_bal` | Molag Bal (Elder Scrolls) | "Speak.", "Crush him.", "You're mine now." | [@lloydaf](https://github.com/lloydaf) |
-| `sheogorath` | Sheogorath (Elder Scrolls) | "Greetings.", "Good choice.", "Boring, boring, boring." | [@lloydaf](https://github.com/lloydaf) |
-| `sopranos` | Tony Soprano (The Sopranos) | "Those who want respect, give respect.", "End of story.", "Forget about it." | [@voider1](https://github.com/voider1) |
-| `sc_terran` | Terran Units Mixed (StarCraft) | SCV, Firebat, Medic, Siege Tank, Science Vessel | [@workdd](https://github.com/workdd) |
-| `sc_scv` | SCV (StarCraft) | "Good to go, sir", "Affirmative", "I read you" | [@workdd](https://github.com/workdd) |
-| `sc_firebat` | Firebat (StarCraft) | "Need a light?", "Ready to roast!", "Fueled up!" | [@workdd](https://github.com/workdd) |
-| `sc_medic` | Medic (StarCraft) | "The doctor is in", "Where does it hurt?", "All patched up!" | [@workdd](https://github.com/workdd) |
-| `sc_tank` | Siege Tank (StarCraft) | "Ready to roll out", "Absolutely", "Done and done" | [@workdd](https://github.com/workdd) |
-| `sc_vessel` | Science Vessel (StarCraft) | "Explorer reporting", "Receiving", "Affirmative" | [@workdd](https://github.com/workdd) |
-| `aoe2` | Taunts (Age of Empires II) | "Wololo", "All hail king of the losers", "Nice town, I'll take it" | [@halilb](https://github.com/halilb) |
-| `aom_greek` | Greek Villager (Age of Mythology) | "Prostagma?", "Etoimon", "Malista" | [@amitaifrey](https://github.com/amitaifrey) |
-| `brewmaster_ru` | Pandaren Brewmaster (Warcraft III, Russian) | "Без проблем", "За Пандарию!", "Пиво для сил?" | [@rubywwwilde](https://github.com/rubywwwilde) |
-| `wc2_peasant` | Human Peasant (Warcraft II) | "Ready to serve.", "Job's done.", "Right-o." | [@sebbeth](https://github.com/sebbeth) |
+36 packs across Warcraft, StarCraft, Red Alert, Portal, Dota 2, Helldivers 2, Elder Scrolls, and more. The default install includes 10 curated English packs:
 
-Switch packs from the CLI:
+| Pack | Character | Sounds |
+|---|---|---|
+| `peon` (default) | Orc Peon (Warcraft III) | "Ready to work?", "Work, work.", "Okie dokie." |
+| `peasant` | Human Peasant (Warcraft III) | "Yes, milord?", "Job's done!", "Ready, sir." |
+| `glados` | GLaDOS (Portal) | "Oh, it's you.", "You monster.", "Your entire team is dead." |
+| `sc_kerrigan` | Sarah Kerrigan (StarCraft) | "I gotcha", "What now?", "Easily amused, huh?" |
+| `sc_battlecruiser` | Battlecruiser (StarCraft) | "Battlecruiser operational", "Make it happen", "Engage" |
+| `ra2_kirov` | Kirov Airship (Red Alert 2) | "Kirov reporting", "Bombardiers to your stations" |
+| `dota2_axe` | Axe (Dota 2) | "Axe is ready!", "Axe-actly!", "Come and get it!" |
+| `duke_nukem` | Duke Nukem | "Hail to the king!", "Groovy.", "Balls of steel." |
+| `tf2_engineer` | Engineer (Team Fortress 2) | "Sentry going up.", "Nice work!", "Cowboy up!" |
+| `hd2_helldiver` | Helldiver (Helldivers 2) | "For democracy!", "How 'bout a nice cup of Liber-tea?" |
+
+**[Browse all 36 packs with audio previews &rarr; openpeon.com/packs](https://openpeon.com/packs)**
+
+Install all 36 with `--all`, or switch packs anytime:
 
 ```bash
-peon --pack ra2_soviet_engineer   # switch to a specific pack
+peon --pack glados                # switch to a specific pack
 peon --pack                       # cycle to the next pack
-peon --packs                      # list all packs
+peon --packs                      # list all installed packs
 ```
 
-Or edit `~/.claude/hooks/peon-ping/config.json` directly:
-
-```json
-{ "active_pack": "ra2_soviet_engineer" }
-```
-
-Want to add your own pack? See [CONTRIBUTING.md](CONTRIBUTING.md).
+Want to add your own pack? See the [full guide at openpeon.com/create](https://openpeon.com/create) or [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Uninstall
 
@@ -212,13 +190,16 @@ python "%USERPROFILE%\.claude\hooks\peon-ping\uninstall.py"
 
 ## How it works
 
-`peon.sh` (Unix) and `peon.py` (Windows) are Claude Code hooks registered for `SessionStart`, `UserPromptSubmit`, `Stop`, `Notification`, and `PermissionRequest` events. On each event the hook maps to a sound category, picks a random voice line (avoiding repeats), plays it via `afplay` (macOS), PowerShell `MediaPlayer` (Windows/WSL2), or `paplay`/`ffplay`/`mpv`/`aplay` (Linux), and updates your terminal tab title.
+`peon.sh` (Unix) and `peon.py` (Windows) are Claude Code hooks registered for `SessionStart`, `UserPromptSubmit`, `Stop`, `Notification`, and `PermissionRequest` events. On each event the hook maps to a CESP sound category, picks a random voice line (avoiding repeats), plays it via `afplay` (macOS), PowerShell `MediaPlayer` (Windows/WSL2), or `paplay`/`ffplay`/`mpv`/`aplay` (Linux), and updates your terminal tab title.
 
-Sound files are property of their respective publishers (Blizzard Entertainment, EA) and are included in the repo for convenience.
+Sound packs are downloaded from the [OpenPeon registry](https://github.com/PeonPing/registry) at install time. The original 36 packs are hosted in [PeonPing/og-packs](https://github.com/PeonPing/og-packs). Sound files are property of their respective publishers (Blizzard, Valve, EA, etc.) and are distributed under fair use for personal notification purposes.
 
 ## Links
 
-- [Landing page](https://peonping.com/)
+- [peonping.com](https://peonping.com/) — landing page
+- [openpeon.com](https://openpeon.com/) — CESP spec, pack browser, creation guide
+- [OpenPeon registry](https://github.com/PeonPing/registry) — pack registry (GitHub Pages)
+- [og-packs](https://github.com/PeonPing/og-packs) — the original 36 sound packs
 - [License (MIT)](LICENSE)
 
 ## Fork changelog
