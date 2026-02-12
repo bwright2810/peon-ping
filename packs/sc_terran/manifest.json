@@ -4,49 +4,49 @@
   "categories": {
     "greeting": {
       "sounds": [
-        { "file": "GoodToGoSir.mp3", "line": "Good to go, sir (SCV)" },
-        { "file": "NeedALight.mp3", "line": "Need a light? (Firebat)" },
-        { "file": "DoctorIsIn.mp3", "line": "The doctor is in (Medic)" },
-        { "file": "ReadyToRollOut.mp3", "line": "Ready to roll out (Siege Tank)" },
-        { "file": "ExplorerReporting.mp3", "line": "Explorer reporting (Science Vessel)" }
+        { "file": "ReadyToRollOut.mp3", "line": "Ready to roll out (Siege Tank)" }
       ]
     },
     "acknowledge": {
       "sounds": [
-        { "file": "Affirmative.mp3", "line": "Affirmative (SCV)" },
-        { "file": "IReadYou.mp3", "line": "I read you (SCV)" },
-        { "file": "OrdersCapn.mp3", "line": "Orders, Cap'n (SCV)" },
-        { "file": "ReadyToRoast.mp3", "line": "Ready to roast! (Firebat)" },
-        { "file": "SayTheWord.mp3", "line": "Say the word (Firebat)" },
-        { "file": "FueledUp.mp3", "line": "Fueled up! (Firebat)" },
-        { "file": "WhereDoesItHurt.mp3", "line": "Where does it hurt? (Medic)" },
-        { "file": "YesDoctor.mp3", "line": "Yes, doctor (Medic)" },
-        { "file": "Absolutely.mp3", "line": "Absolutely (Siege Tank)" },
-        { "file": "OrdersReceived.mp3", "line": "Orders received (Siege Tank)" },
-        { "file": "Receiving.mp3", "line": "Receiving (Science Vessel)" }
+        { "file": "Receiving.mp3", "line": "Receiving (Science Vessel)" },
+        { "file": "Affirmative.mp3", "line": "Affirmative (Science Vessel)" },
+        { "file": "ExplorerReporting.mp3", "line": "Explorer reporting (Science Vessel)" }
       ]
     },
     "complete": {
       "sounds": [
         { "file": "GoodToGoSir.mp3", "line": "Good to go, sir (SCV)" },
-        { "file": "Affirmative.mp3", "line": "Affirmative (SCV)" },
+        { "file": "IReadYou.mp3", "line": "I read you (SCV)" },
+        { "file": "OrdersCapn.mp3", "line": "Orders, Cap'n (SCV)" }
+      ]
+    },
+    "error": {
+      "sounds": [
+        { "file": "NeedALight.mp3", "line": "Need a light? (Firebat)" },
         { "file": "ReadyToRoast.mp3", "line": "Ready to roast! (Firebat)" },
         { "file": "FueledUp.mp3", "line": "Fueled up! (Firebat)" },
-        { "file": "PatchedUp.mp3", "line": "All patched up! (Medic)" },
-        { "file": "YesDoctor.mp3", "line": "Yes, doctor (Medic)" },
-        { "file": "DoneAndDone.mp3", "line": "Done and done (Siege Tank)" },
-        { "file": "Absolutely.mp3", "line": "Absolutely (Siege Tank)" },
-        { "file": "Receiving.mp3", "line": "Receiving (Science Vessel)" }
+        { "file": "SayTheWord.mp3", "line": "Say the word (Firebat)" }
       ]
     },
     "permission": {
       "sounds": [
-        { "file": "IReadYou.mp3", "line": "I read you (SCV)" },
-        { "file": "OrdersCapn.mp3", "line": "Orders, Cap'n (SCV)" },
-        { "file": "SayTheWord.mp3", "line": "Say the word (Firebat)" },
+        { "file": "DoctorIsIn.mp3", "line": "The doctor is in (Medic)" },
         { "file": "WhereDoesItHurt.mp3", "line": "Where does it hurt? (Medic)" },
-        { "file": "OrdersReceived.mp3", "line": "Orders received (Siege Tank)" },
-        { "file": "Receiving.mp3", "line": "Receiving (Science Vessel)" }
+        { "file": "PatchedUp.mp3", "line": "All patched up! (Medic)" },
+        { "file": "YesDoctor.mp3", "line": "Yes, doctor (Medic)" }
+      ]
+    },
+    "resource_limit": {
+      "sounds": [
+        { "file": "Absolutely.mp3", "line": "Absolutely (Siege Tank)" }
+      ]
+    },
+    "annoyed": {
+      "sounds": [
+        { "file": "NeedALight.mp3", "line": "Need a light? (Firebat)" },
+        { "file": "ReadyToRoast.mp3", "line": "Ready to roast! (Firebat)" },
+        { "file": "FueledUp.mp3", "line": "Fueled up! (Firebat)" }
       ]
     }
   }
