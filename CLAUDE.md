@@ -1,22 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. For user-facing documentation (install, configuration, pack list, CLI usage), see [README.md](README.md).
-
-## What This Is
-
-peon-ping plays game character voice lines and sends desktop notifications when AI coding agents need attention. It works with **Claude Code** (built-in), **OpenAI Codex**, **Cursor**, and **OpenCode** via adapters. It handles 5 hook events: `SessionStart`, `UserPromptSubmit`, `Stop`, `Notification`, `PermissionRequest`. Written entirely in bash + embedded Python (no npm/node runtime needed).
-
-## Related Repos
-
-peon-ping is part of the [PeonPing](https://github.com/PeonPing) org:
-
-| Repo | Purpose |
-|---|---|
-| **[peon-ping](https://github.com/PeonPing/peon-ping)** (this repo) | CLI tool, installer, hook runtime, IDE adapters |
-| **[registry](https://github.com/PeonPing/registry)** | Pack registry (`index.json` served via GitHub Pages at `peonping.github.io/registry/index.json`) |
-| **[og-packs](https://github.com/PeonPing/og-packs)** | Official sound packs (40+ packs, tagged releases) |
-| **[homebrew-tap](https://github.com/PeonPing/homebrew-tap)** | Homebrew formula (`brew install PeonPing/tap/peon-ping`) |
-| **[openpeon](https://github.com/PeonPing/openpeon)** | CESP spec + openpeon.com website (Next.js in `site/`) |
+Developer guide for AI coding agents working on this codebase. For user-facing docs (install, configuration, CLI usage, sound packs, remote dev, mobile notifications), see [README.md](README.md).
 
 ## Commands
 
@@ -42,17 +26,38 @@ There is no build step, linter, or formatter configured for the shell codebase.
 
 See [RELEASING.md](RELEASING.md) for the full release process (version bumps, tagging, Homebrew tap updates).
 
+## Related Repos
+
+peon-ping is part of the [PeonPing](https://github.com/PeonPing) org:
+
+| Repo | Purpose |
+|---|---|
+| **[peon-ping](https://github.com/PeonPing/peon-ping)** (this repo) | CLI tool, installer, hook runtime, IDE adapters |
+| **[registry](https://github.com/PeonPing/registry)** | Pack registry (`index.json` served via GitHub Pages at `peonping.github.io/registry/index.json`) |
+| **[og-packs](https://github.com/PeonPing/og-packs)** | Official sound packs (40+ packs, tagged releases) |
+| **[homebrew-tap](https://github.com/PeonPing/homebrew-tap)** | Homebrew formula (`brew install PeonPing/tap/peon-ping`) |
+| **[openpeon](https://github.com/PeonPing/openpeon)** | CESP spec + openpeon.com website (Next.js in `site/`) |
+
 ## Architecture
 
 ### Core Files
 
-- **`peon.sh`** — Main hook script. Receives JSON event data on stdin, routes events via an embedded Python block that handles config loading, event parsing, sound selection, and state management in a single invocation. Shell code then handles async audio playback (`nohup` + background processes) and desktop notifications.
+- **`peon.sh`** — Main hook script. Receives JSON event data on stdin, routes events via an embedded Python block that handles config loading, event parsing, sound selection, and state management in a single invocation. Shell code then handles async audio playback (`nohup` + background processes), desktop notifications, and mobile push notifications.
+- **`relay.sh`** — HTTP relay server for SSH/devcontainer/Codespaces. Runs on the local machine, receives audio and notification requests from remote sessions.
 - **`install.sh`** — Installer. Fetches pack registry from GitHub Pages, downloads selected packs, registers hooks in `~/.claude/settings.json`. Falls back to a hardcoded pack list if registry is unreachable.
 - **`config.json`** — Default configuration template.
 
 ### Event Flow
 
-IDE triggers hook → `peon.sh` reads JSON stdin → single Python call maps events to CESP categories (`session.start`, `task.complete`, `input.required`, `user.spam`, etc.) → picks a sound (no-repeat logic) → shell plays audio async and optionally sends desktop notification.
+IDE triggers hook → `peon.sh` reads JSON stdin → single Python call maps events to CESP categories (`session.start`, `task.complete`, `input.required`, `user.spam`, etc.) → picks a sound (no-repeat logic) → shell plays audio async and optionally sends desktop/mobile notification.
+
+### Platform Detection
+
+`peon.sh` detects the runtime environment and routes audio accordingly:
+
+- **mac / linux / wsl2** — Direct audio playback via native backends
+- **ssh** — Detected via `SSH_CONNECTION`/`SSH_CLIENT` env vars → relay at `localhost:19998`
+- **devcontainer** — Detected via `REMOTE_CONTAINERS`/`CODESPACES` env vars → relay at `host.docker.internal:19998`
 
 ### Multi-IDE Adapters
 
@@ -68,6 +73,7 @@ All adapters translate IDE-specific events into the standardized CESP JSON forma
 - **macOS:** `afplay`
 - **WSL2:** PowerShell `MediaPlayer`
 - **Linux:** priority chain: `pw-play` → `paplay` → `ffplay` → `mpv` → `play` (SoX) → `aplay` (each with different volume scaling)
+- **SSH/devcontainer:** HTTP relay to local machine (see `relay.sh`)
 
 ### State Management
 
