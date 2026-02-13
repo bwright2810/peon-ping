@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.7.1 (2026-02-13)
+
+### Fixed
+- `peon packs list` and other CLI commands now work correctly for Homebrew installs ([#101](https://github.com/PeonPing/peon-ping/issues/101))
+
 ## v1.7.0 (2026-02-12)
 
 ### Added
