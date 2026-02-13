@@ -1,3 +1,12 @@
 {
-  "outputDirectory": "docs"
+  "buildCommand": "cd docs && npm install && npm run build",
+  "outputDirectory": "docs/out",
+  "redirects": [
+    {
+      "source": "/install",
+      "destination": "https://raw.githubusercontent.com/PeonPing/peon-ping/main/install.sh",
+      "statusCode": 301
+    }
+  ],
+  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_AUTHOR_LOGIN\" != \"garysheng\" ]"
 }

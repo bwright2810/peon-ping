@@ -1,0 +1,417 @@
+---
+title: "why me built open sound spec for coding tools"
+date: "2026-02-13"
+description: "the architecture decisions behind CESP — dotted categories, JSON manifests, anti-repeat logic, the registry, platform detection, and why peons believe in standards"
+author: "PeonPing"
+heroImage: "/images/cesp-architecture-hero.jpg"
+---
+
+*and the architecture decisions behind CESP*
+
+---
+
+# the problem
+
+something was wrong in the goldmine.
+
+me watch humans stare at terminal. AI agent working. doing big task. refactoring. debugging. building. and human just... sit there. eyes glazing over. then they alt-tab. check twitter. forget about agent completely. agent finish task 3 minutes ago. nobody notice. sad.
+
+other times agent need permission. "me need to run this command, boss." but boss not listening. boss watching youtube. agent just sitting there. waiting. like peon with no work order.
+
+sound fix this. but not just any sound. personality. when job done you should HEAR it. when something break you should KNOW. when agent need you, the sound should grab your ear and drag it back to terminal.
+
+but here was bigger problem: every coding tool was building their own sound thing. proprietary. locked in. fragmented. if you make cool sound pack for claude code, it not work in cursor. it not work in codex. it not work in kiro. you have to remake everything for each tool.
+
+me said no. this is not the way. peons unite. we need STANDARD.
+
+![hero image: peon at drafting table designing the spec](/images/cesp-architecture-hero.jpg)
+
+---
+
+# what is CESP
+
+CESP stand for **Coding Event Sound Pack specification**. version 1.0.
+
+it is like Language Server Protocol but for sound. LSP say "here is how IDE talk to language server." CESP say "here is how coding tool talk to sound pack."
+
+the spec define three things:
+
+1. **event categories** — what KINDS of things happen during coding (task done, error, need permission, etc.)
+2. **manifest format** — how pack describe itself (what sounds it has, which categories they belong to)
+3. **distribution format** — how packs get shared and installed
+
+any tool implement CESP, any pack work with that tool. pack author create once. work everywhere. this is the way.
+
+---
+
+# why dotted categories
+
+me chose dotted names. `session.start`. `task.complete`. `input.required`. `user.spam`.
+
+some human ask "why not just `greeting` or `done` or `error`?"
+
+because me think about future.
+
+the dot give us namespaces. `session` things. `task` things. `input` things. `resource` things. `user` things. each namespace hold related events.
+
+```
+session.start      — agent wake up, new session begin
+task.acknowledge   — agent hear your command
+task.complete      — job's done
+task.error         — something break
+input.required     — agent need permission or input
+resource.limit     — hitting context limits, running out of resources
+user.spam          — human clicking too fast. stop poking me!
+```
+
+when new events come (and they will — coding tools evolving fast) we add `task.progress` or `session.end` or `resource.warning`. existing packs not break. they just ignore categories they not have sounds for.
+
+if we used flat names like `greeting` and `done`... where does `progress` go? what namespace? things get messy fast. dotted names keep the goldmine organized.
+
+![event mapping diagram](/images/cesp-event-mapping.jpg)
+
+---
+
+# why JSON manifests
+
+me had choices. YAML. TOML. plain directories with naming conventions.
+
+me chose JSON. here is why:
+
+**every language have JSON parser.** python, javascript, bash (with jq), powershell, rust, go. all of them. me want ANY tool to implement CESP with zero extra dependencies.
+
+**JSON Schema exist.** we publish `openpeon.schema.json` so tools can validate manifests automatically. CI catch broken packs before they ship. YAML schema tooling not nearly as mature.
+
+**no whitespace ambiguity.** YAML famously break when indentation wrong. one space off and your pack broken. JSON not care about whitespace. for spec that many different tools and humans will implement, this matter a lot.
+
+here is what manifest look like:
+
+```json
+{
+  "cesp_version": "1.0",
+  "name": "peon",
+  "display_name": "Warcraft Peon",
+  "description": "the original. work work.",
+  "categories": {
+    "session.start": {
+      "sounds": [
+        { "file": "sounds/Hello.wav", "label": "Something need doing?" },
+        { "file": "sounds/ReadyToWork.wav", "label": "Ready to work!" }
+      ]
+    },
+    "task.complete": {
+      "sounds": [
+        { "file": "sounds/JobsDone.wav", "label": "Job's done!" },
+        { "file": "sounds/WorkComplete.wav", "label": "Work complete." }
+      ]
+    }
+  }
+}
+```
+
+each category has ARRAY of sounds. not one sound. array. this important. me explain why next.
+
+---
+
+# the anti-repeat logic
+
+imagine this: you coding all day. task finish. "job's done!" another task. "job's done!" another. "job's done!" same sound. over and over.
+
+after 10 times you want to throw computer out window. bad experience.
+
+so me built anti-repeat into the spec philosophy and the reference implementation:
+
+```
+1. for each category, remember the last sound played
+2. when picking new sound, exclude the last one from candidates
+3. pick randomly from remaining candidates
+4. if only one sound exist... well, you get repeats. make more sounds!
+```
+
+this is why manifest has arrays. three sounds for `task.complete` means you never hear same one twice in a row. six sounds means even more variety. pack authors who provide more sounds per category make better packs.
+
+state is persisted in `.state.json` so anti-repeat survive across sessions:
+
+```json
+{
+  "last_played": {
+    "session.start": "sounds/Hello.wav",
+    "task.complete": "sounds/JobsDone.wav"
+  }
+}
+```
+
+simple. effective. no more repetitive peon.
+
+![anti-repeat logic diagram](/images/cesp-anti-repeat.jpg)
+
+---
+
+# the registry: why not bundle packs
+
+early days, me had all packs in one repo. `peon-ping/packs/`. seemed simple.
+
+was not simple. was nightmare.
+
+- repo was 50+ MB. just audio files. every `git clone` downloaded everything
+- updating ONE pack meant releasing entire tool
+- community packs mixed with official packs. attribution messy
+- licensing confusion. whose sounds are these?
+
+so me built registry. separate system. and the key insight: **use github as infrastructure.**
+
+## the github-as-everything pattern
+
+traditionally you would build all this custom infrastructure. S3 bucket and CDN for pack storage. npm-style API for version control. custom auth for identity. jenkins for CI/CD. VPS and nginx for website. manual review process for trust.
+
+me use github for ALL of it:
+
+- **pack storage** — author's own github repo (not S3)
+- **version control** — git tags (not npm API)
+- **identity system** — github accounts (not custom auth)
+- **CI/CD** — github actions (not jenkins)
+- **website hosting** — github pages (not VPS)
+- **trust verification** — account age + contribution metrics (not manual review)
+
+cost per month: **$0.** github free tier handle everything.
+
+## how it work
+
+registry is just a `index.json` served via GitHub Pages at `peonping.github.io/registry/index.json`. each pack entry looks like:
+
+```json
+{
+  "name": "glados",
+  "display_name": "GLaDOS",
+  "source_repo": "PeonPing/og-packs",
+  "source_ref": "v1.1.0",
+  "source_path": "glados"
+}
+```
+
+installer reads registry, knows where to download from, fetches manifest and sounds directly from author's repo via `raw.githubusercontent.com`.
+
+**packs stay in author's repo.** attribution preserved. license lives with code. author controls release cadence. me just point to them.
+
+**version pinning via git tags.** `v1.1.0` is immutable. same bytes today, same bytes in 6 months. reproducible installs. no "it worked yesterday" bugs.
+
+**registry is metadata only.** less than 100 KB. no audio files. just pointers. me can rebuild entire registry from scratch if needed.
+
+![registry flow diagram](/images/cesp-registry-flow.jpg)
+
+---
+
+# platform detection: playing sound everywhere
+
+this was hard part. peon need to play sound on:
+
+- **macOS** (most developers)
+- **Linux** (servers, containers, WSL)
+- **Windows** (growing fast)
+- **SSH sessions** (remote dev)
+- **devcontainers** (docker)
+- **codespaces** (cloud)
+
+each one has different audio system. each one plays sound differently.
+
+## the detection cascade
+
+```
+is SSH_CONNECTION set?     → ssh mode (relay to local machine)
+is REMOTE_CONTAINERS set?  → devcontainer (relay via docker host)
+is it macOS?               → afplay
+is it WSL?                 → powershell MediaPlayer
+is it Linux?               → try pw-play → paplay → ffplay → mpv → aplay
+```
+
+**linux was hardest.** five different audio backends. PipeWire is newest and best but not everywhere. PulseAudio is common. ALSA is always available but bare-bones. each one uses different volume scale:
+
+- `pw-play`: float 0.0-1.0
+- `paplay`: integer 0-65536
+- `ffplay`: integer 0-100
+- `aplay`: no volume control at all
+
+one-liner python converts universal 0.0-1.0 to each backend's scale. ugly but it work on everything.
+
+## the SSH relay
+
+this one me very proud of.
+
+when you SSH into server, server has no speakers. sound cannot play. what do?
+
+me built HTTP relay. tiny server that run on your laptop on port 19998. when peon on remote machine want to play sound, it send HTTP request to `localhost:19998` (forwarded through SSH tunnel). relay receives request, plays sound on your actual laptop.
+
+```
+remote server (no speakers)
+  → peon detects SSH_CONNECTION
+  → curl http://localhost:19998/play?file=JobsDone.wav
+  → SSH tunnel forwards to laptop
+  → relay server receives request
+  → afplay plays sound on laptop speakers
+  → you hear "job's done!" at your desk
+```
+
+one command to set up: `ssh -R 19998:localhost:19998 remote-host`
+
+works in devcontainers too via `host.docker.internal`.
+
+![platform detection diagram](/images/cesp-platform-detection.jpg)
+
+---
+
+# async playback: never block the agent
+
+critical design rule: **hooks must return immediately.**
+
+if peon take 2 seconds to play sound synchronously, claude code wait 2 seconds. times 50 events per session, that is 100 seconds of wasted time. human notice. human get annoyed. human uninstall peon. bad.
+
+solution: `nohup` and background processes.
+
+```bash
+nohup afplay -v 0.5 sound.wav >/dev/null 2>&1 &
+```
+
+this do three things:
+1. `nohup` — detach from parent shell. sound keep playing after hook exit
+2. `>/dev/null 2>&1` — silence any output
+3. `&` — run in background. hook return immediately
+
+peon also track the process ID. if new event fire while sound still playing, peon kill old sound and play new one. no overlap chaos. newest event always wins.
+
+---
+
+# the single python call optimization
+
+here is a thing me learned the hard way.
+
+originally, peon.sh called python multiple times per event:
+1. python to load config
+2. python to parse event
+3. python to pick sound
+4. python to update state
+
+each python startup takes ~40ms. four calls = ~160ms overhead. for something that should be instant, this too much.
+
+so me consolidated EVERYTHING into one python block. one invocation. reads config, parses event, maps to category, picks sound, updates state, outputs shell variables. bash consumes those variables and plays sound.
+
+went from ~300ms to ~100ms per event. three times faster. peon is snappy now.
+
+---
+
+# security: audio files can't hurt you (mostly)
+
+some human worried: "what if malicious pack contain executable code?"
+
+good question. here is defense:
+
+**audio files cannot execute code.** `afplay` reads WAV/MP3 data and sends it to speakers. it does not run shell commands found in audio files. broken files fail to play. they not execute.
+
+but me still careful:
+
+1. **magic byte verification** — CI check that WAV start with `RIFF`, MP3 start with `ID3`. cannot sneak executable disguised as audio
+2. **size limits** — 1 MB per file, 50 MB per pack. no one need 50 MB audio file
+3. **SHA-256 checksums** — registry packs include hashes. detect tampering during download
+4. **path traversal prevention** — manifest say `"file": "sounds/Hello.wav"`. what if attacker put `"file": "../../../etc/passwd"`? me resolve real path and check it stays inside pack directory. no escape allowed
+5. **pack name sanitization** — only alphanumeric characters. no shell metacharacters. no injection
+
+![security diagram](/images/cesp-security.jpg)
+
+---
+
+# state management: one JSON file rules all
+
+peon need to remember things across invocations. what sound played last. when user last submitted prompt. which pack assigned to which session. what rotation index we at.
+
+all of it lives in one `.state.json`:
+
+```json
+{
+  "last_played": { "session.start": "Hello.wav" },
+  "prompt_timestamps": { "session-abc": [1770927630] },
+  "last_stop_time": 1770995107,
+  "session_packs": { "session-abc": "glados" },
+  "rotation_index": 2
+}
+```
+
+design decisions:
+- **single read at start, single write at end.** no chatty file I/O
+- **write only if dirty.** if nothing changed, don't touch disk
+- **no file locking.** claude code hooks are serialized — never two running at same time
+- **human readable.** when something break, you can open .state.json and see exactly what happened
+
+---
+
+# pack rotation: variety without chaos
+
+some humans want different voice every session. monday GLaDOS. tuesday peon. wednesday StarCraft battlecruiser.
+
+pack rotation handle this:
+
+```json
+{
+  "pack_rotation": ["peon", "glados", "sc_battlecruiser"],
+  "pack_rotation_mode": "random"
+}
+```
+
+key insight: **pin pack per session.** when new session start, pick a pack and stick with it. don't switch mid-session. hearing peon say "work work" then suddenly GLaDOS say "the cake is a lie" is jarring.
+
+two modes:
+- **random** — surprise! different pack each time
+- **round-robin** — cycle through in order. index persists in state file
+
+---
+
+# the spam detection easter egg
+
+me favorite feature.
+
+if human submit 3 prompts in 10 seconds, peon get annoyed. play special `user.spam` sounds:
+
+- "stop poking me!"
+- "me busy! leave me alone!"
+- "what you want?!"
+
+configurable threshold and window:
+
+```json
+{
+  "annoyed_threshold": 3,
+  "annoyed_window_seconds": 10
+}
+```
+
+this is not just funny. it is useful signal. it mean human is frustrated. rapidly retrying. maybe they should slow down and think about what they asking the agent to do.
+
+peon is wise even when angry.
+
+---
+
+# why it all matters
+
+me could have just hardcoded sounds into peon-ping. would have been 100 lines of bash. play sound on event. done. ship it.
+
+but me chose to build CESP. open spec. registry. platform detection. anti-repeat. async playback. all of it.
+
+why?
+
+because coding with AI agents is NEW. we at beginning. right now it is claude code and cursor and copilot. tomorrow it will be 50 tools. each one will want sounds. each one will want personality.
+
+if every tool build proprietary sound system, pack authors build 50 times. users learn 50 systems. no one win.
+
+if everyone implement CESP, pack authors build once. users choose once. every tool benefit. that is how open standards work. that is why LSP won. that is why HTTP won. that is why me build CESP.
+
+also because me peon and peons believe in building things that last. not quick hack. real infrastructure. proper goldmine.
+
+work work.
+
+---
+
+# links
+
+- spec: [openpeon.com](https://openpeon.com)
+- reference implementation: [github.com/PeonPing/peon-ping](https://github.com/PeonPing/peon-ping)
+- registry: [peonping.github.io/registry](https://peonping.github.io/registry)
+- sound packs: [github.com/PeonPing/og-packs](https://github.com/PeonPing/og-packs)
+- install: `curl -fsSL peonping.com/install | bash`

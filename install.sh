@@ -307,6 +307,9 @@ else
   mkdir -p "$INSTALL_DIR/adapters"
   curl -fsSL "$REPO_BASE/adapters/codex.sh" -o "$INSTALL_DIR/adapters/codex.sh" 2>/dev/null || true
   curl -fsSL "$REPO_BASE/adapters/cursor.sh" -o "$INSTALL_DIR/adapters/cursor.sh" 2>/dev/null || true
+  curl -fsSL "$REPO_BASE/adapters/kiro.sh" -o "$INSTALL_DIR/adapters/kiro.sh" 2>/dev/null || true
+  curl -fsSL "$REPO_BASE/adapters/antigravity.sh" -o "$INSTALL_DIR/adapters/antigravity.sh" 2>/dev/null || true
+  curl -fsSL "$REPO_BASE/adapters/opencode.sh" -o "$INSTALL_DIR/adapters/opencode.sh" 2>/dev/null || true
   mkdir -p "$INSTALL_DIR/docs"
   curl -fsSL "$REPO_BASE/docs/peon-icon.png" -o "$INSTALL_DIR/docs/peon-icon.png" 2>/dev/null || true
   if [ "$UPDATING" = false ]; then
@@ -367,12 +370,55 @@ else
 fi
 
 # --- Download sound packs ---
+PACK_ARRAY=($PACKS)
+TOTAL_PACKS=${#PACK_ARRAY[@]}
+PACK_INDEX=0
+
+IS_TTY=false
+[ -t 1 ] && IS_TTY=true
+
+TOTAL_DOWNLOAD_FILES=0
+TOTAL_DOWNLOAD_BYTES=0
+TOTAL_DOWNLOAD_PACKS=0
+
+draw_progress() {
+  local pidx="$1" ptotal="$2" pname="$3"
+  local cur="$4" total="$5" bytes="$6"
+  local idx_width=${#ptotal}
+  local bar_width=20 filled=0 empty i bar=""
+
+  if [ "$total" -gt 0 ]; then
+    filled=$(( cur * bar_width / total ))
+  fi
+  empty=$(( bar_width - filled ))
+  for (( i=0; i<filled; i++ )); do bar+="#"; done
+  for (( i=0; i<empty; i++ )); do bar+="-"; done
+
+  local size_str
+  if [ "$bytes" -ge 1048576 ]; then
+    size_str="$(( bytes / 1048576 )).$(( (bytes % 1048576) * 10 / 1048576 )) MB"
+  elif [ "$bytes" -ge 1024 ]; then
+    size_str="$(( bytes / 1024 )) KB"
+  else
+    size_str="$bytes B"
+  fi
+
+  printf "\r  [%${idx_width}d/%d] %-20s [%s] %d/%d (%s)%-10s" \
+    "$pidx" "$ptotal" "$pname" "$bar" "$cur" "$total" "$size_str" ""
+}
+
+echo ""
+echo "Downloading packs..."
 for pack in $PACKS; do
   if ! is_safe_pack_name "$pack"; then
     echo "  Warning: skipping invalid pack name: $pack" >&2
     continue
   fi
 
+  PACK_INDEX=$((PACK_INDEX + 1))
+
+  # Clear old sound files before downloading new ones (fixes stale files after pack updates)
+  rm -rf "$INSTALL_DIR/packs/$pack/sounds"
   mkdir -p "$INSTALL_DIR/packs/$pack/sounds"
 
   # Get source info from registry (or use fallback)
@@ -426,7 +472,61 @@ for p in data.get('packs', []):
 
   # Download sound files
   manifest="$INSTALL_DIR/packs/$pack/openpeon.json"
-  python3 -c "
+  SOUND_COUNT=$(python3 -c "
+import json, os
+m = json.load(open('$manifest'))
+seen = set()
+for cat in m.get('categories', {}).values():
+    for s in cat.get('sounds', []):
+        seen.add(os.path.basename(s['file']))
+print(len(seen))
+" 2>/dev/null || echo "?")
+
+  if [ "$IS_TTY" = true ] && [ "$SOUND_COUNT" != "?" ]; then
+    local_file_count=0
+    local_byte_count=0
+
+    draw_progress "$PACK_INDEX" "$TOTAL_PACKS" "$pack" 0 "$SOUND_COUNT" 0
+
+    while read -r sfile; do
+      if ! is_safe_filename "$sfile"; then
+        echo "  Warning: skipped unsafe filename in $pack: $sfile" >&2
+        continue
+      fi
+      if curl -fsSL "$PACK_BASE/sounds/$sfile" \
+           -o "$INSTALL_DIR/packs/$pack/sounds/$sfile" </dev/null 2>/dev/null; then
+        local_file_count=$((local_file_count + 1))
+        fsize=$(wc -c < "$INSTALL_DIR/packs/$pack/sounds/$sfile" | tr -d ' ')
+        local_byte_count=$((local_byte_count + fsize))
+      else
+        echo "  Warning: failed to download $pack/sounds/$sfile" >&2
+      fi
+      draw_progress "$PACK_INDEX" "$TOTAL_PACKS" "$pack" \
+        "$local_file_count" "$SOUND_COUNT" "$local_byte_count"
+    done < <(python3 -c "
+import json, os
+m = json.load(open('$manifest'))
+seen = set()
+for cat in m.get('categories', {}).values():
+    for s in cat.get('sounds', []):
+        f = s['file']
+        basename = os.path.basename(f)
+        if basename not in seen:
+            seen.add(basename)
+            print(basename)
+")
+
+    draw_progress "$PACK_INDEX" "$TOTAL_PACKS" "$pack" \
+      "$local_file_count" "$SOUND_COUNT" "$local_byte_count"
+    printf "\n"
+
+    TOTAL_DOWNLOAD_FILES=$((TOTAL_DOWNLOAD_FILES + local_file_count))
+    TOTAL_DOWNLOAD_BYTES=$((TOTAL_DOWNLOAD_BYTES + local_byte_count))
+    TOTAL_DOWNLOAD_PACKS=$((TOTAL_DOWNLOAD_PACKS + 1))
+  else
+    printf "  [%d/%d] %s " "$PACK_INDEX" "$TOTAL_PACKS" "$pack"
+
+    python3 -c "
 import json, os
 m = json.load(open('$manifest'))
 seen = set()
@@ -438,15 +538,34 @@ for cat in m.get('categories', {}).values():
             seen.add(basename)
             print(basename)
 " | while read -r sfile; do
-    if ! is_safe_filename "$sfile"; then
-      echo "  Warning: skipped unsafe filename in $pack: $sfile" >&2
-      continue
-    fi
-    if ! curl -fsSL "$PACK_BASE/sounds/$sfile" -o "$INSTALL_DIR/packs/$pack/sounds/$sfile" </dev/null 2>/dev/null; then
-      echo "  Warning: failed to download $pack/sounds/$sfile" >&2
-    fi
-  done
+      if ! is_safe_filename "$sfile"; then
+        echo "  Warning: skipped unsafe filename in $pack: $sfile" >&2
+        continue
+      fi
+      if curl -fsSL "$PACK_BASE/sounds/$sfile" -o "$INSTALL_DIR/packs/$pack/sounds/$sfile" </dev/null 2>/dev/null; then
+        printf "."
+      else
+        printf "x"
+        echo "  Warning: failed to download $pack/sounds/$sfile" >&2
+      fi
+    done
+
+    printf " %s sounds\n" "$SOUND_COUNT"
+    TOTAL_DOWNLOAD_PACKS=$((TOTAL_DOWNLOAD_PACKS + 1))
+  fi
 done
+
+if [ "$IS_TTY" = true ] && [ "$TOTAL_DOWNLOAD_PACKS" -gt 0 ]; then
+  if [ "$TOTAL_DOWNLOAD_BYTES" -ge 1048576 ]; then
+    SUMMARY_SIZE="$(( TOTAL_DOWNLOAD_BYTES / 1048576 )).$(( (TOTAL_DOWNLOAD_BYTES % 1048576) * 10 / 1048576 )) MB"
+  elif [ "$TOTAL_DOWNLOAD_BYTES" -ge 1024 ]; then
+    SUMMARY_SIZE="$(( TOTAL_DOWNLOAD_BYTES / 1024 )) KB"
+  else
+    SUMMARY_SIZE="$TOTAL_DOWNLOAD_BYTES B"
+  fi
+  echo ""
+  echo "Downloaded $TOTAL_DOWNLOAD_PACKS packs ($TOTAL_DOWNLOAD_FILES files, $SUMMARY_SIZE)"
+fi
 
 chmod +x "$INSTALL_DIR/peon.sh"
 chmod +x "$INSTALL_DIR/relay.sh"
@@ -455,7 +574,7 @@ chmod +x "$INSTALL_DIR/relay.sh"
 SKILL_DIR="$BASE_DIR/skills/peon-ping-toggle"
 mkdir -p "$SKILL_DIR"
 if [ "$LOCAL_MODE" = true ]; then
-  SKILL_HOOK_CMD="bash .claude/hooks/peon-ping/peon.sh"
+  SKILL_HOOK_CMD="bash $HOME/.claude/hooks/peon-ping/peon.sh"
 else
   SKILL_HOOK_CMD="bash $INSTALL_DIR/peon.sh"
 fi
@@ -553,19 +672,18 @@ if [ "$LOCAL_MODE" = false ] && [ "$UPDATING" = false ]; then
 fi
 
 # --- Update settings.json ---
+# Always write hooks to GLOBAL settings — hooks need absolute paths and
+# must work regardless of which project directory Claude Code runs in.
 echo ""
 echo "Updating Claude Code hooks in settings.json..."
 
-if [ "$LOCAL_MODE" = true ]; then
-  HOOK_CMD=".claude/hooks/peon-ping/peon.sh"
-else
-  HOOK_CMD="$INSTALL_DIR/peon.sh"
-fi
+HOOK_CMD="$GLOBAL_BASE/hooks/peon-ping/peon.sh"
+HOOK_SETTINGS="$GLOBAL_BASE/settings.json"
 
 python3 -c "
 import json, os, sys
 
-settings_path = '$SETTINGS'
+settings_path = '$HOOK_SETTINGS'
 hook_cmd = '$HOOK_CMD'
 
 # Load existing settings
@@ -613,14 +731,12 @@ with open(settings_path, 'w') as f:
 print('Hooks registered for: ' + ', '.join(events))
 "
 
-# --- Remove peon-ping hooks from the OTHER settings scope to prevent doubles ---
-if [ "$LOCAL_MODE" = true ]; then
-  OTHER_SETTINGS="$GLOBAL_BASE/settings.json"
-else
-  OTHER_SETTINGS="$LOCAL_BASE/settings.json"
-fi
+# --- Remove peon-ping hooks from project-level settings to prevent doubles ---
+# Since hooks are always written to global settings now, clean any stale
+# project-level hooks that may exist from older installs.
+OTHER_SETTINGS="$LOCAL_BASE/settings.json"
 
-if [ -f "$OTHER_SETTINGS" ] && [ "$OTHER_SETTINGS" != "$SETTINGS" ]; then
+if [ -f "$OTHER_SETTINGS" ] && [ "$OTHER_SETTINGS" != "$HOOK_SETTINGS" ]; then
   python3 -c "
 import json, os
 

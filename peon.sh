@@ -332,7 +332,7 @@ APPLESCRIPT
         if [ -f "$icon_path" ]; then
           icon_flag="--icon=$icon_path"
         fi
-        nohup notify-send --urgency="$urgency" $icon_flag "$title" "$msg" >/dev/null 2>&1 &
+        nohup notify-send --urgency="$urgency" --expire-time=5000 $icon_flag "$title" "$msg" >/dev/null 2>&1 &
       fi
       ;;
   esac
@@ -1028,6 +1028,15 @@ for i, s in enumerate(sounds):
       fi
     done
     exit 0 ;;
+  update)
+    echo "Updating peon-ping..."
+    INSTALL_SCRIPT="$PEON_DIR/install.sh"
+    if [ -f "$INSTALL_SCRIPT" ]; then
+      bash "$INSTALL_SCRIPT"
+    else
+      curl -fsSL https://raw.githubusercontent.com/bwright2810/peon-ping/main/install.sh | bash
+    fi
+    exit $? ;;
   help|--help|-h)
     cat <<'HELPEOF'
 Usage: peon <command>
@@ -1043,6 +1052,7 @@ Commands:
   preview --list       List all categories and sound counts in the active pack
                        Categories: session.start, task.acknowledge, task.complete,
                        task.error, input.required, resource.limit, user.spam
+  update               Update peon-ping and refresh all sound packs
   help                 Show this help
 
 Pack management:

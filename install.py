@@ -371,6 +371,14 @@ def main() -> None:
                 else:
                     print(f"  Warning: failed to download manifest for {pack}")
 
+        # Clear old sound files before downloading (fixes stale files after
+        # pack updates — matches upstream install.sh behaviour).
+        for pack in packs:
+            sounds_dir = install_dir / "packs" / pack / "sounds"
+            if sounds_dir.exists():
+                shutil.rmtree(sounds_dir)
+            sounds_dir.mkdir(parents=True, exist_ok=True)
+
         # Build a list of all sound files to download so we can show progress
         sound_downloads: List[Tuple[str, str, str]] = []  # (pack, filename, base_url)
         for pack in packs:

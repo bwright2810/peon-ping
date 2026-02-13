@@ -6,6 +6,7 @@ firebase-debug.log
 .claude/
 .env*.local
 social-post.md
+social-posts/
 .last_update_check
 .state.json
 homebrew-tap/
