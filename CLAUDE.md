@@ -13,11 +13,17 @@ When merging commits from the upstream repo (`https://github.com/PeonPing/peon-p
 - Merge cleanly whenever possible. During merge conflicts, grab everything new from upstream but keep our custom additions.
 - Anywhere the original repo URL (`PeonPing/peon-ping`) is referenced, replace it with our fork URL (`bwright2810/peon-ping`).
 - We default `desktop_notifications` to `false` (upstream defaults to `true`). Preserve our default during merges.
-- After merging, ensure that our Windows-specific `.py` files match the behavior of any new changes to the associated `.sh` files:
+- After merging, sync our Windows-specific `.py` files with the corresponding `.sh` files. The file pairs are:
   - `install.sh` ↔ `install.py`
   - `peon.sh` ↔ `peon.py`
   - `uninstall.sh` ↔ `uninstall.py`
   - `peon.bat` wraps `peon.py`
+
+  Sync has three tiers — all must be checked during every merge:
+
+  1. **Data sync (must do in merge commit):** Shared constants like `FALLBACK_PACKS`, `DEFAULT_PACKS`, `FALLBACK_REF`, and core file download lists must match between `.sh` and `.py`. These are called out explicitly in the post-merge checklist below.
+  2. **Behavioral sync (must do in merge commit):** If upstream changes _existing_ shared logic (e.g. event mapping, config reading, sound selection, notification defaults), port those same changes to the `.py` files.
+  3. **New feature parity (track as follow-up):** If upstream adds _entirely new_ subsystems (e.g. relay support, mobile notifications, new CLI subcommands), these do not need to be ported in the merge commit. Instead, note the gaps in the commit message and create follow-up work to port them.
 
 ### Expected upstream deletions
 
