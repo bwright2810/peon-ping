@@ -182,6 +182,27 @@ The installer copies `peon-ping.ts` to `~/.config/opencode/plugins/` and creates
 
 > **Tip:** Install `terminal-notifier` (`brew install terminal-notifier`) for richer notifications with subtitle and grouping support.
 
+<details>
+<summary>🎨 Optional: custom peon icon for notifications</summary>
+
+By default, `terminal-notifier` shows a generic Terminal icon. The included script replaces it with the peon icon using built-in macOS tools (`sips` + `iconutil`) — no extra dependencies.
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/PeonPing/peon-ping/main/adapters/opencode/setup-icon.sh)
+```
+
+Or if installed locally (Homebrew / git clone):
+
+```bash
+bash ~/.claude/hooks/peon-ping/adapters/opencode/setup-icon.sh
+```
+
+The script auto-finds the peon icon (Homebrew libexec, OpenCode config, or Claude hooks dir), generates a proper `.icns`, backs up the original `Terminal.icns`, and replaces it. Re-run after `brew upgrade terminal-notifier`.
+
+> **Future:** When [jamf/Notifier](https://github.com/jamf/Notifier) ships to Homebrew ([#32](https://github.com/jamf/Notifier/issues/32)), the plugin will migrate to it — Notifier has built-in `--rebrand` support, no icon hacks needed.
+
+</details>
+
 ### Kiro setup
 
 Create `~/.kiro/agents/peon-ping.json`:
