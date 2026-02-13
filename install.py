@@ -279,6 +279,23 @@ def main() -> None:
                 shutil.copy2(src, install_dir / filename)
                 print(f"  Copied {filename}")
 
+        # Copy adapters
+        adapters_src = script_dir / "adapters"
+        if adapters_src.is_dir():
+            adapters_dst = install_dir / "adapters"
+            adapters_dst.mkdir(parents=True, exist_ok=True)
+            for adapter_file in adapters_src.glob("*.sh"):
+                shutil.copy2(adapter_file, adapters_dst / adapter_file.name)
+            print("  Copied adapters/")
+
+        # Copy peon icon
+        icon_src = script_dir / "docs" / "peon-icon.png"
+        if icon_src.exists():
+            icon_dst = install_dir / "docs"
+            icon_dst.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(icon_src, icon_dst / "peon-icon.png")
+            print("  Copied docs/peon-icon.png")
+
         # Copy config only on fresh install
         if not updating:
             copy_if_exists(script_dir / "config.json", install_dir / "config.json")
@@ -297,6 +314,29 @@ def main() -> None:
             except Exception as exc:
                 print(f"  Warning: failed to download {filename}: {exc}")
         print(f"  Core files: {len(core_files)} downloaded")
+
+        # Download adapters
+        adapters_dst = install_dir / "adapters"
+        adapters_dst.mkdir(parents=True, exist_ok=True)
+        for adapter_name in ("codex.sh", "cursor.sh"):
+            try:
+                download(
+                    f"{REPO_BASE}/adapters/{adapter_name}",
+                    adapters_dst / adapter_name,
+                )
+            except Exception:
+                pass  # Adapters are optional; fail silently
+
+        # Download peon icon
+        icon_dst = install_dir / "docs"
+        icon_dst.mkdir(parents=True, exist_ok=True)
+        try:
+            download(
+                f"{REPO_BASE}/docs/peon-icon.png",
+                icon_dst / "peon-icon.png",
+            )
+        except Exception:
+            pass  # Icon is optional; fail silently
 
         # Download manifests and sounds from registry-resolved sources
         print(f"  Downloading manifests for {len(packs)} packs...")
