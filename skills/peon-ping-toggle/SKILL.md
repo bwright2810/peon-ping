@@ -13,7 +13,7 @@ Toggle peon-ping sounds on or off. Also handles any peon-ping configuration chan
 Run the following command using the Bash tool:
 
 ```bash
-bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/hooks/peon-ping/peon.sh --toggle
+bash "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/hooks/peon-ping/peon.sh toggle
 ```
 
 Report the output to the user. The command will print either:

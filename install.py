@@ -30,16 +30,16 @@ DEFAULT_PACKS = (
 
 # Fallback pack list (used if registry is unreachable — keep in sync with install.sh)
 FALLBACK_PACKS = (
-    "acolyte_ru aoe2 aom_greek brewmaster_ru dota2_axe duke_nukem glados "
-    "hd2_helldiver molag_bal peon peon_cz peon_es peon_fr peon_pl peon_ru "
-    "peasant peasant_cz peasant_es peasant_fr peasant_ru ra2_kirov "
-    "ra2_soviet_engineer ra_soviet rick sc_battlecruiser sc_firebat sc_kerrigan "
-    "sc_medic sc_scv sc_tank sc_terran sc_vessel sheogorath sopranos "
+    "acolyte_de acolyte_ru aoe2 aom_greek brewmaster_ru dota2_axe duke_nukem glados "
+    "hd2_helldiver molag_bal murloc ocarina_of_time peon peon_cz peon_de peon_es "
+    "peon_fr peon_pl peon_ru peasant peasant_cz peasant_es peasant_fr peasant_ru "
+    "ra2_kirov ra2_soviet_engineer ra_soviet rick sc_battlecruiser sc_firebat "
+    "sc_kerrigan sc_medic sc_scv sc_tank sc_terran sc_vessel sheogorath sopranos "
     "tf2_engineer wc2_peasant"
 ).split()
 
 FALLBACK_REPO = "PeonPing/og-packs"
-FALLBACK_REF = "v1.0.0"
+FALLBACK_REF = "v1.1.0"
 
 
 # ---------------------------------------------------------------------------
@@ -271,8 +271,9 @@ def main() -> None:
                     shutil.copytree(item, dst)
 
         # Copy core files
-        for filename in ("peon.sh", "peon.py", "peon.bat", "completions.bash",
-                         "completions.fish", "VERSION", "uninstall.sh"):
+        for filename in ("peon.sh", "peon.py", "peon.bat", "relay.sh",
+                         "completions.bash", "completions.fish", "VERSION",
+                         "uninstall.sh"):
             src = script_dir / filename
             if src.exists():
                 shutil.copy2(src, install_dir / filename)
@@ -286,8 +287,9 @@ def main() -> None:
 
         # Download core files
         core_files = (
-            "peon.sh", "peon.py", "peon.bat", "completions.bash",
-            "completions.fish", "VERSION", "uninstall.sh", "uninstall.py",
+            "peon.sh", "peon.py", "peon.bat", "relay.sh",
+            "completions.bash", "completions.fish", "VERSION",
+            "uninstall.sh", "uninstall.py",
         )
         for filename in core_files:
             try:

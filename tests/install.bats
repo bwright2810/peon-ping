@@ -19,6 +19,7 @@ setup() {
   cp "$(dirname "$BATS_TEST_FILENAME")/../VERSION" "$CLONE_DIR/"
   cp "$(dirname "$BATS_TEST_FILENAME")/../completions.bash" "$CLONE_DIR/"
   cp "$(dirname "$BATS_TEST_FILENAME")/../completions.fish" "$CLONE_DIR/"
+  cp "$(dirname "$BATS_TEST_FILENAME")/../relay.sh" "$CLONE_DIR/"
   cp "$(dirname "$BATS_TEST_FILENAME")/../uninstall.sh" "$CLONE_DIR/" 2>/dev/null || touch "$CLONE_DIR/uninstall.sh"
   cp -r "$(dirname "$BATS_TEST_FILENAME")/../skills" "$CLONE_DIR/" 2>/dev/null || true
 

@@ -22,12 +22,10 @@ teardown() {
   [[ "$sound" == *"/packs/peon/sounds/Hello"* ]]
 }
 
-@test "Notification permission_prompt plays a permission sound" {
+@test "Notification permission_prompt sets tab title but no sound (PermissionRequest handles sound)" {
   run_peon '{"hook_event_name":"Notification","notification_type":"permission_prompt","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
   [ "$PEON_EXIT" -eq 0 ]
-  afplay_was_called
-  sound=$(afplay_sound)
-  [[ "$sound" == *"/packs/peon/sounds/Perm"* ]]
+  ! afplay_was_called
 }
 
 @test "PermissionRequest plays a permission sound (IDE support)" {
@@ -397,46 +395,46 @@ JSON
 # Pause / mute feature
 # ============================================================
 
-@test "--toggle creates .paused file and prints paused message" {
-  run bash "$PEON_SH" --toggle
+@test "toggle creates .paused file and prints paused message" {
+  run bash "$PEON_SH" toggle
   [ "$status" -eq 0 ]
   [[ "$output" == *"sounds paused"* ]]
   [ -f "$TEST_DIR/.paused" ]
 }
 
-@test "--toggle removes .paused file when already paused" {
+@test "toggle removes .paused file when already paused" {
   touch "$TEST_DIR/.paused"
-  run bash "$PEON_SH" --toggle
+  run bash "$PEON_SH" toggle
   [ "$status" -eq 0 ]
   [[ "$output" == *"sounds resumed"* ]]
   [ ! -f "$TEST_DIR/.paused" ]
 }
 
-@test "--pause creates .paused file" {
-  run bash "$PEON_SH" --pause
+@test "pause creates .paused file" {
+  run bash "$PEON_SH" pause
   [ "$status" -eq 0 ]
   [[ "$output" == *"sounds paused"* ]]
   [ -f "$TEST_DIR/.paused" ]
 }
 
-@test "--resume removes .paused file" {
+@test "resume removes .paused file" {
   touch "$TEST_DIR/.paused"
-  run bash "$PEON_SH" --resume
+  run bash "$PEON_SH" resume
   [ "$status" -eq 0 ]
   [[ "$output" == *"sounds resumed"* ]]
   [ ! -f "$TEST_DIR/.paused" ]
 }
 
-@test "--status reports paused when .paused exists" {
+@test "status reports paused when .paused exists" {
   touch "$TEST_DIR/.paused"
-  run bash "$PEON_SH" --status
+  run bash "$PEON_SH" status
   [ "$status" -eq 0 ]
   [[ "$output" == *"paused"* ]]
 }
 
-@test "--status reports active when not paused" {
+@test "status reports active when not paused" {
   rm -f "$TEST_DIR/.paused"
-  run bash "$PEON_SH" --status
+  run bash "$PEON_SH" status
   [ "$status" -eq 0 ]
   [[ "$output" == *"active"* ]]
 }
@@ -482,8 +480,8 @@ json.dump(c, open('$TEST_DIR/config.json', 'w'), indent=2)
   [ "$val" = "False" ]
 }
 
-@test "--notifications-off updates config" {
-  run bash "$PEON_SH" --notifications-off
+@test "notifications off updates config" {
+  run bash "$PEON_SH" notifications off
   [ "$status" -eq 0 ]
   [[ "$output" == *"desktop notifications off"* ]]
   # Verify config was updated
@@ -491,11 +489,11 @@ json.dump(c, open('$TEST_DIR/config.json', 'w'), indent=2)
   [ "$val" = "False" ]
 }
 
-@test "--notifications-on updates config" {
+@test "notifications on updates config" {
   # First turn off
-  bash "$PEON_SH" --notifications-off
+  bash "$PEON_SH" notifications off
   # Then turn on
-  run bash "$PEON_SH" --notifications-on
+  run bash "$PEON_SH" notifications on
   [ "$status" -eq 0 ]
   [[ "$output" == *"desktop notifications on"* ]]
   val=$(/usr/bin/python3 -c "import json; print(json.load(open('$TEST_DIR/config.json')).get('desktop_notifications', True))")
@@ -503,18 +501,18 @@ json.dump(c, open('$TEST_DIR/config.json', 'w'), indent=2)
 }
 
 # ============================================================
-# --packs (list packs)
+# packs list
 # ============================================================
 
-@test "--packs lists all available packs" {
-  run bash "$PEON_SH" --packs
+@test "packs list shows all available packs" {
+  run bash "$PEON_SH" packs list
   [ "$status" -eq 0 ]
   [[ "$output" == *"peon"* ]]
   [[ "$output" == *"sc_kerrigan"* ]]
 }
 
-@test "--packs marks the active pack with *" {
-  run bash "$PEON_SH" --packs
+@test "packs list marks the active pack with *" {
+  run bash "$PEON_SH" packs list
   [ "$status" -eq 0 ]
   [[ "$output" == *"Orc Peon *"* ]]
   # sc_kerrigan should NOT be marked
@@ -522,19 +520,40 @@ json.dump(c, open('$TEST_DIR/config.json', 'w'), indent=2)
   [[ "$line" != *"*"* ]]
 }
 
-@test "--packs marks correct pack after switch" {
-  bash "$PEON_SH" --pack sc_kerrigan
-  run bash "$PEON_SH" --packs
+@test "packs list marks correct pack after switch" {
+  bash "$PEON_SH" packs use sc_kerrigan
+  run bash "$PEON_SH" packs list
   [ "$status" -eq 0 ]
   [[ "$output" == *"Sarah Kerrigan (StarCraft) *"* ]]
 }
 
+@test "packs list works when script is not in hooks dir (Homebrew install)" {
+  # Simulate Homebrew: script runs from a dir without packs, but hooks dir has them
+  FAKE_HOME="$(mktemp -d)"
+  HOOKS_DIR="$FAKE_HOME/.claude/hooks/peon-ping"
+  mkdir -p "$HOOKS_DIR/packs"
+  cp -R "$TEST_DIR/packs/peon" "$HOOKS_DIR/packs/"
+  cp "$TEST_DIR/config.json" "$HOOKS_DIR/config.json"
+  echo '{}' > "$HOOKS_DIR/.state.json"
+
+  # Unset CLAUDE_PEON_DIR so it falls back to BASH_SOURCE dirname → script dir (no packs)
+  # Set HOME to fake home so the fallback finds the hooks dir
+  unset CLAUDE_PEON_DIR
+  run env HOME="$FAKE_HOME" bash "$PEON_SH" packs list
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"peon"* ]]
+  [[ "$output" == *"Orc Peon"* ]]
+
+  rm -rf "$FAKE_HOME"
+  export CLAUDE_PEON_DIR="$TEST_DIR"
+}
+
 # ============================================================
-# --pack <name> (set specific pack)
+# packs use <name> (set specific pack)
 # ============================================================
 
-@test "--pack <name> switches to valid pack" {
-  run bash "$PEON_SH" --pack sc_kerrigan
+@test "packs use <name> switches to valid pack" {
+  run bash "$PEON_SH" packs use sc_kerrigan
   [ "$status" -eq 0 ]
   [[ "$output" == *"switched to sc_kerrigan"* ]]
   [[ "$output" == *"Sarah Kerrigan"* ]]
@@ -543,66 +562,73 @@ json.dump(c, open('$TEST_DIR/config.json', 'w'), indent=2)
   [ "$active" = "sc_kerrigan" ]
 }
 
-@test "--pack <name> preserves other config fields" {
-  bash "$PEON_SH" --pack sc_kerrigan
+@test "packs use <name> preserves other config fields" {
+  bash "$PEON_SH" packs use sc_kerrigan
   volume=$(/usr/bin/python3 -c "import json; print(json.load(open('$TEST_DIR/config.json'))['volume'])")
   [ "$volume" = "0.5" ]
 }
 
-@test "--pack <name> errors on nonexistent pack" {
-  run bash "$PEON_SH" --pack nonexistent
+@test "packs use <name> errors on nonexistent pack" {
+  run bash "$PEON_SH" packs use nonexistent
   [ "$status" -ne 0 ]
   [[ "$output" == *"not found"* ]]
   [[ "$output" == *"Available packs"* ]]
 }
 
-@test "--pack <name> does not modify config on invalid pack" {
-  bash "$PEON_SH" --pack nonexistent || true
+@test "packs use <name> does not modify config on invalid pack" {
+  bash "$PEON_SH" packs use nonexistent || true
   active=$(/usr/bin/python3 -c "import json; print(json.load(open('$TEST_DIR/config.json'))['active_pack'])")
   [ "$active" = "peon" ]
 }
 
 # ============================================================
-# --pack (cycle, no argument)
+# packs next (cycle, no argument)
 # ============================================================
 
-@test "--pack cycles to next pack alphabetically" {
+@test "packs next cycles to next pack alphabetically" {
   # Active is peon, next alphabetically is sc_kerrigan
-  run bash "$PEON_SH" --pack
+  run bash "$PEON_SH" packs next
   [ "$status" -eq 0 ]
   [[ "$output" == *"switched to sc_kerrigan"* ]]
 }
 
-@test "--pack cycle wraps around from last to first" {
+@test "packs next wraps around from last to first" {
   # Set to sc_kerrigan (last alphabetically), should wrap to peon
-  bash "$PEON_SH" --pack sc_kerrigan
-  run bash "$PEON_SH" --pack
+  bash "$PEON_SH" packs use sc_kerrigan
+  run bash "$PEON_SH" packs next
   [ "$status" -eq 0 ]
   [[ "$output" == *"switched to peon"* ]]
 }
 
-@test "--pack cycle updates config correctly" {
-  bash "$PEON_SH" --pack
+@test "packs next updates config correctly" {
+  bash "$PEON_SH" packs next
   active=$(/usr/bin/python3 -c "import json; print(json.load(open('$TEST_DIR/config.json'))['active_pack'])")
   [ "$active" = "sc_kerrigan" ]
 }
 
 # ============================================================
-# --help (updated)
+# help
 # ============================================================
 
-@test "--help shows pack commands" {
-  run bash "$PEON_SH" --help
+@test "help shows pack commands" {
+  run bash "$PEON_SH" help
   [ "$status" -eq 0 ]
-  [[ "$output" == *"--packs"* ]]
-  [[ "$output" == *"--pack"* ]]
+  [[ "$output" == *"packs list"* ]]
+  [[ "$output" == *"packs use"* ]]
 }
 
 @test "unknown option shows helpful error" {
   run bash "$PEON_SH" --foobar
   [ "$status" -ne 0 ]
   [[ "$output" == *"Unknown option"* ]]
-  [[ "$output" == *"peon --help"* ]]
+  [[ "$output" == *"peon help"* ]]
+}
+
+@test "unknown command shows helpful error" {
+  run bash "$PEON_SH" foobar
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Unknown command"* ]]
+  [[ "$output" == *"peon help"* ]]
 }
 
 @test "no arguments on a TTY shows usage hint and exits" {
@@ -614,7 +640,87 @@ json.dump(c, open('$TEST_DIR/config.json', 'w'), indent=2)
   fi
   [ "$status" -eq 0 ]
   [[ "$output" == *"Usage:"* ]]
-  [[ "$output" == *"--help"* ]]
+  [[ "$output" == *"help"* ]]
+}
+
+# ============================================================
+# packs remove (non-interactive pack removal)
+# ============================================================
+
+@test "packs remove <name> removes pack directory" {
+  [ -d "$TEST_DIR/packs/sc_kerrigan" ]
+  echo "y" | bash "$PEON_SH" packs remove sc_kerrigan
+  [ ! -d "$TEST_DIR/packs/sc_kerrigan" ]
+}
+
+@test "packs remove <name> prints confirmation" {
+  run bash -c 'echo "y" | bash "$0" packs remove sc_kerrigan' "$PEON_SH"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Removed sc_kerrigan"* ]]
+}
+
+@test "packs remove <name> cleans pack_rotation in config" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{
+  "active_pack": "peon", "volume": 0.5, "enabled": true,
+  "categories": {},
+  "pack_rotation": ["peon", "sc_kerrigan"]
+}
+JSON
+  echo "y" | bash "$PEON_SH" packs remove sc_kerrigan
+  rotation=$(/usr/bin/python3 -c "import json; print(json.load(open('$TEST_DIR/config.json')).get('pack_rotation', []))")
+  [[ "$rotation" == *"peon"* ]]
+  [[ "$rotation" != *"sc_kerrigan"* ]]
+}
+
+@test "packs remove active pack errors" {
+  run bash "$PEON_SH" packs remove peon
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"active pack"* ]]
+  # Pack should still exist
+  [ -d "$TEST_DIR/packs/peon" ]
+}
+
+@test "packs remove nonexistent pack errors" {
+  run bash "$PEON_SH" packs remove nonexistent
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"not found"* ]]
+}
+
+@test "packs remove last remaining pack errors" {
+  # Remove sc_kerrigan first so only peon remains
+  rm -rf "$TEST_DIR/packs/sc_kerrigan"
+  run bash "$PEON_SH" packs remove peon
+  [ "$status" -ne 0 ]
+  # Should error either because it's active or because it's the last one
+  [ -d "$TEST_DIR/packs/peon" ]
+}
+
+@test "packs remove multiple packs at once" {
+  # Add a third pack so we can remove two and still have one left
+  mkdir -p "$TEST_DIR/packs/glados/sounds"
+  cat > "$TEST_DIR/packs/glados/manifest.json" <<'JSON'
+{
+  "name": "glados",
+  "display_name": "GLaDOS",
+  "categories": {
+    "session.start": { "sounds": [{ "file": "Hello1.wav", "label": "Hello" }] }
+  }
+}
+JSON
+  touch "$TEST_DIR/packs/glados/sounds/Hello1.wav"
+
+  echo "y" | bash "$PEON_SH" packs remove sc_kerrigan,glados
+  [ ! -d "$TEST_DIR/packs/sc_kerrigan" ]
+  [ ! -d "$TEST_DIR/packs/glados" ]
+  # Active pack still present
+  [ -d "$TEST_DIR/packs/peon" ]
+}
+
+@test "help shows packs remove command" {
+  run bash "$PEON_SH" help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"packs remove"* ]]
 }
 
 # ============================================================
@@ -827,4 +933,391 @@ JSON
   # aplay is used and no volume flags are passed
   [[ "$cmdline" != *"volume"* ]]
   [[ "$cmdline" != *"-v "* ]]
+}
+
+# ============================================================
+# Devcontainer detection and relay playback
+# ============================================================
+
+@test "devcontainer plays sound via relay curl" {
+  export PLATFORM=devcontainer
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  relay_was_called
+  cmdline=$(relay_cmdline)
+  [[ "$cmdline" == *"/play?"* ]]
+  [[ "$cmdline" == *"X-Volume"* ]]
+}
+
+@test "devcontainer does not call afplay or linux audio" {
+  export PLATFORM=devcontainer
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  ! afplay_was_called
+  ! linux_audio_was_called
+}
+
+@test "devcontainer exits cleanly when relay unavailable" {
+  export PLATFORM=devcontainer
+  # .relay_available NOT created, so mock curl returns exit 7
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+}
+
+@test "devcontainer SessionStart shows relay guidance when relay unavailable" {
+  export PLATFORM=devcontainer
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  [[ "$PEON_STDERR" == *"relay not reachable"* ]]
+  [[ "$PEON_STDERR" == *"peon relay"* ]]
+}
+
+@test "devcontainer SessionStart does NOT show relay guidance when relay available" {
+  export PLATFORM=devcontainer
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  [[ "$PEON_STDERR" != *"relay not reachable"* ]]
+}
+
+@test "devcontainer relay respects PEON_RELAY_HOST override" {
+  export PLATFORM=devcontainer
+  export PEON_RELAY_HOST="custom.host.local"
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  relay_was_called
+  cmdline=$(relay_cmdline)
+  [[ "$cmdline" == *"custom.host.local"* ]]
+}
+
+@test "devcontainer relay respects PEON_RELAY_PORT override" {
+  export PLATFORM=devcontainer
+  export PEON_RELAY_PORT="12345"
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  relay_was_called
+  cmdline=$(relay_cmdline)
+  [[ "$cmdline" == *"12345"* ]]
+}
+
+@test "devcontainer volume passed in X-Volume header" {
+  export PLATFORM=devcontainer
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{ "active_pack": "peon", "volume": 0.7, "enabled": true, "categories": {} }
+JSON
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  relay_was_called
+  cmdline=$(relay_cmdline)
+  [[ "$cmdline" == *"X-Volume: 0.7"* ]]
+}
+
+@test "devcontainer Stop event plays via relay" {
+  export PLATFORM=devcontainer
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  relay_was_called
+  # Check that /play? appears somewhere in the log (not just last line, since /notify comes after)
+  grep -q "/play?" "$TEST_DIR/relay_curl.log"
+}
+
+@test "devcontainer notification sent via relay POST" {
+  export PLATFORM=devcontainer
+  touch "$TEST_DIR/.relay_available"
+  # PermissionRequest triggers notification
+  run_peon '{"hook_event_name":"PermissionRequest","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  # Should have both /play and /notify relay calls
+  relay_was_called
+  grep -q "/notify" "$TEST_DIR/relay_curl.log"
+}
+
+# ============================================================
+# SSH detection and relay playback
+# ============================================================
+
+@test "ssh plays sound via relay curl" {
+  export PLATFORM=ssh
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  relay_was_called
+  cmdline=$(relay_cmdline)
+  [[ "$cmdline" == *"/play?"* ]]
+  [[ "$cmdline" == *"X-Volume"* ]]
+}
+
+@test "ssh does not call afplay or linux audio" {
+  export PLATFORM=ssh
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  ! afplay_was_called
+  ! linux_audio_was_called
+}
+
+@test "ssh exits cleanly when relay unavailable" {
+  export PLATFORM=ssh
+  # .relay_available NOT created, so mock curl returns exit 7
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+}
+
+@test "ssh SessionStart shows relay guidance when relay unavailable" {
+  export PLATFORM=ssh
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  [[ "$PEON_STDERR" == *"SSH session detected"* ]]
+  [[ "$PEON_STDERR" == *"relay not reachable"* ]]
+  [[ "$PEON_STDERR" == *"ssh -R"* ]]
+}
+
+@test "ssh SessionStart does NOT show relay guidance when relay available" {
+  export PLATFORM=ssh
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  [[ "$PEON_STDERR" != *"relay not reachable"* ]]
+}
+
+@test "ssh relay uses localhost as default host" {
+  export PLATFORM=ssh
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  relay_was_called
+  cmdline=$(relay_cmdline)
+  [[ "$cmdline" == *"localhost"* ]]
+}
+
+@test "ssh relay respects PEON_RELAY_HOST override" {
+  export PLATFORM=ssh
+  export PEON_RELAY_HOST="custom.host.local"
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  relay_was_called
+  cmdline=$(relay_cmdline)
+  [[ "$cmdline" == *"custom.host.local"* ]]
+}
+
+@test "ssh relay respects PEON_RELAY_PORT override" {
+  export PLATFORM=ssh
+  export PEON_RELAY_PORT="12345"
+  touch "$TEST_DIR/.relay_available"
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  relay_was_called
+  cmdline=$(relay_cmdline)
+  [[ "$cmdline" == *"12345"* ]]
+}
+
+@test "ssh notification sent via relay POST" {
+  export PLATFORM=ssh
+  touch "$TEST_DIR/.relay_available"
+  # PermissionRequest triggers notification
+  run_peon '{"hook_event_name":"PermissionRequest","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  relay_was_called
+  grep -q "/notify" "$TEST_DIR/relay_curl.log"
+}
+
+# ============================================================
+# Mobile push notifications
+# ============================================================
+
+@test "mobile ntfy sends push notification on Stop" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{
+  "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {},
+  "mobile_notify": { "enabled": true, "service": "ntfy", "topic": "test-topic", "server": "https://ntfy.sh" }
+}
+JSON
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  mobile_was_called
+  cmdline=$(mobile_cmdline)
+  [[ "$cmdline" == *"MOBILE_NTFY"* ]]
+  [[ "$cmdline" == *"ntfy.sh/test-topic"* ]]
+}
+
+@test "mobile ntfy sends push on PermissionRequest" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{
+  "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {},
+  "mobile_notify": { "enabled": true, "service": "ntfy", "topic": "test-topic", "server": "https://ntfy.sh" }
+}
+JSON
+  run_peon '{"hook_event_name":"PermissionRequest","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  mobile_was_called
+  cmdline=$(mobile_cmdline)
+  [[ "$cmdline" == *"Priority: high"* ]]
+}
+
+@test "mobile disabled does not send push" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{
+  "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {},
+  "mobile_notify": { "enabled": false, "service": "ntfy", "topic": "test-topic" }
+}
+JSON
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  ! mobile_was_called
+}
+
+@test "mobile not configured does not send push" {
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  ! mobile_was_called
+}
+
+@test "mobile paused does not send push" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{
+  "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {},
+  "mobile_notify": { "enabled": true, "service": "ntfy", "topic": "test-topic" }
+}
+JSON
+  touch "$TEST_DIR/.paused"
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  ! mobile_was_called
+}
+
+@test "mobile does not send on SessionStart (no NOTIFY)" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{
+  "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {},
+  "mobile_notify": { "enabled": true, "service": "ntfy", "topic": "test-topic" }
+}
+JSON
+  run_peon '{"hook_event_name":"SessionStart","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  ! mobile_was_called
+}
+
+@test "mobile pushover sends notification" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{
+  "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {},
+  "mobile_notify": { "enabled": true, "service": "pushover", "user_key": "ukey123", "app_token": "atoken456" }
+}
+JSON
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  mobile_was_called
+  cmdline=$(mobile_cmdline)
+  [[ "$cmdline" == *"MOBILE_PUSHOVER"* ]]
+  [[ "$cmdline" == *"api.pushover.net"* ]]
+}
+
+@test "mobile telegram sends notification" {
+  cat > "$TEST_DIR/config.json" <<'JSON'
+{
+  "active_pack": "peon", "volume": 0.5, "enabled": true, "categories": {},
+  "mobile_notify": { "enabled": true, "service": "telegram", "bot_token": "bot123", "chat_id": "456" }
+}
+JSON
+  run_peon '{"hook_event_name":"Stop","cwd":"/tmp/myproject","session_id":"s1","permission_mode":"default"}'
+  [ "$PEON_EXIT" -eq 0 ]
+  mobile_was_called
+  cmdline=$(mobile_cmdline)
+  [[ "$cmdline" == *"MOBILE_TELEGRAM"* ]]
+  [[ "$cmdline" == *"api.telegram.org"* ]]
+}
+
+@test "peon mobile ntfy configures mobile_notify" {
+  bash "$PEON_SH" mobile ntfy my-test-topic
+  python3 -c "
+import json
+cfg = json.load(open('$TEST_DIR/config.json'))
+mn = cfg['mobile_notify']
+assert mn['service'] == 'ntfy', f'expected ntfy, got {mn[\"service\"]}'
+assert mn['topic'] == 'my-test-topic', f'expected my-test-topic, got {mn[\"topic\"]}'
+assert mn['enabled'] == True
+"
+}
+
+@test "peon mobile off disables mobile" {
+  # First configure
+  bash "$PEON_SH" mobile ntfy some-topic
+  # Then disable
+  bash "$PEON_SH" mobile off
+  python3 -c "
+import json
+cfg = json.load(open('$TEST_DIR/config.json'))
+mn = cfg['mobile_notify']
+assert mn['enabled'] == False, 'expected disabled'
+assert mn['service'] == 'ntfy', 'service should be preserved'
+"
+}
+
+@test "peon mobile status shows config" {
+  bash "$PEON_SH" mobile ntfy status-topic
+  output=$(bash "$PEON_SH" mobile status)
+  [[ "$output" == *"on"* ]]
+  [[ "$output" == *"ntfy"* ]]
+  [[ "$output" == *"status-topic"* ]]
+}
+
+@test "help shows mobile commands" {
+  output=$(bash "$PEON_SH" help)
+  [[ "$output" == *"mobile"* ]]
+  [[ "$output" == *"ntfy"* ]]
+}
+
+# ============================================================
+# Preview command
+# ============================================================
+
+@test "preview with no arg plays all session.start sounds" {
+  run bash "$PEON_SH" preview
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"previewing [session.start]"* ]]
+  [[ "$output" == *"Ready to work?"* ]]
+  [[ "$output" == *"Yes?"* ]]
+  afplay_was_called
+  # session.start has 2 sounds in the test manifest
+  [ "$(afplay_call_count)" -eq 2 ]
+}
+
+@test "preview with explicit category plays those sounds" {
+  run bash "$PEON_SH" preview task.complete
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"previewing [task.complete]"* ]]
+  afplay_was_called
+  # task.complete has 2 sounds in the test manifest
+  [ "$(afplay_call_count)" -eq 2 ]
+}
+
+@test "preview with single-sound category plays one sound" {
+  run bash "$PEON_SH" preview user.spam
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Me busy, leave me alone!"* ]]
+  afplay_was_called
+  [ "$(afplay_call_count)" -eq 1 ]
+}
+
+@test "preview with invalid category shows error and available categories" {
+  run bash "$PEON_SH" preview nonexistent.category
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"not found"* ]]
+  [[ "$output" == *"Available categories"* ]]
+}
+
+@test "help shows preview command" {
+  output=$(bash "$PEON_SH" help)
+  [[ "$output" == *"preview"* ]]
+}
+
+@test "preview --list shows all categories with sound counts" {
+  run bash "$PEON_SH" preview --list
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"categories in"* ]]
+  [[ "$output" == *"session.start"* ]]
+  [[ "$output" == *"task.complete"* ]]
+  [[ "$output" == *"user.spam"* ]]
+  [[ "$output" == *"sounds"* ]]
 }
